@@ -33,9 +33,12 @@ y = dados['PM25']
 
 #assegurar que NO2 é númerico
 X.loc[:, 'NO2'] = pd.to_numeric(X['NO2'], errors='coerce')
-#dir vento - colocou-se média da estaçao
-#vel vento - média no mesmo ano
 
+'''
+Como realizou-se o preenchumento de dados faltantes:
+dir vento - colocou-se média da estaçao
+vel vento - média no mesmo ano
+'''
 #olhar os dados faltantes
 no2_train = X.dropna(subset=['NO2'])
 no2_missing = X[X['NO2'].isnull()]

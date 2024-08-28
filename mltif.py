@@ -32,7 +32,7 @@ X = dados[['DIRVI', 'VELVI', 'TEMP', 'UMI', 'aerosol','NO2','DIST_OCEAN']]
 y = dados['PM25']
 
 #assegurar que NO2 é númerico
-X.loc[:, 'NO2'] = pd.to_numeric(X['NO2'], errors='coerce')
+X['NO2'] = pd.to_numeric(X['NO2'], errors='coerce')
 
 '''
 Como realizou-se o preenchumento de dados faltantes:
@@ -82,16 +82,13 @@ predicted_values = predict_missing_values(no2_train, no2_missing, best_predictor
 X.loc[X['NO2'].isnull(), 'NO2'] = predicted_values
 
 
-# Função para padronizar os dados
-def standardize(X):
-    X_np = X.to_numpy()  # Convertendo a série para um array numpy
-    Xs = X_np - X_np.mean(0)[None, :]
-    X_scale = X_np.std(0)
-    Xs = Xs / X_scale[None, :]
-    return Xs
 
-#estandarizar os dados
-X_s = standardize(X)
+# estandar
+scaler = StandardScaler()
+
+# Ajustar y transformar os dados
+X_s = scaler.fit_transform(X)
+
 
 # Converter o array numpy estandarizado  para um DataFrame
 Xs = pd.DataFrame(X_s, columns=X.columns, index=X.index)
@@ -159,9 +156,10 @@ class Network(nn.Module):
         in_features = input_size
         
         for out_features in hidden_layers:
-            # Adicione uma camada linear seguida de uma função de ativação Sigmoid
+            # Adicione uma camada linear seguida de uma função de ativação ReLU
             layers.append(nn.Linear(in_features, out_features))
-            layers.append(nn.Sigmoid())
+            #layers.append(nn.Sigmoid())
+            layers.append(nn.ReLU())  
             in_features = out_features  # Atualize o número de neurônios de entrada para a próxima camada
         
         # Adicione a camada de saída

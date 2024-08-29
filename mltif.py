@@ -115,25 +115,25 @@ for _, group in dados.groupby(bairro_changes):
     sub_y.append(subset_y)
 
 # Dividir em treinamento teste e validação
-X_train, X_test, y_train, y_test = train_test_split(sub_x[0], sub_y[0], test_size=0.2, random_state=42)
+X_trn, X_tst, y_trn, y_tst = train_test_split(sub_x[0], sub_y[0], test_size=0.2, random_state=42)
 
-#X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
+#X_val, X_tst, y_val, y_tst = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
 
 #transformar df em np
-X_train_np = X_train.to_numpy().astype(np.float32)
-#X_val_np = X_val.to_numpy().astype(np.float32)
-X_test_np = X_test.to_numpy().astype(np.float32)
-y_train_np = y_train.to_numpy().astype(np.float32)
-#y_val_np = y_val.to_numpy().astype(np.float32)
-y_test_np = y_test.to_numpy().astype(np.float32)
+Xs_train = X_trn.to_numpy().astype(np.float32)
+#X_val = Xs_val.to_numpy().astype(np.float32)
+Xs_test = X_tst.to_numpy().astype(np.float32)
+y_train = y_trn.to_numpy().astype(np.float32)
+#y_val = ys_val.to_numpy().astype(np.float32)
+y_test = y_tst.to_numpy().astype(np.float32)
 
 #criar tensores
-X_train_t = torch.tensor(X_train_np.astype(np.float32))
-y_train_t = torch.tensor(y_train_np.astype(np.float32))
+X_train_t = torch.tensor(Xs_train.astype(np.float32))
+y_train_t = torch.tensor(y_train.astype(np.float32))
 train = TensorDataset(X_train_t , y_train_t)
 
-X_test_t = torch.tensor(X_test_np.astype(np.float32))
-y_test_t = torch.tensor(y_test_np.astype(np.float32))
+X_test_t = torch.tensor(Xs_test.astype(np.float32))
+y_test_t = torch.tensor(y_test.astype(np.float32))
 test = TensorDataset(X_test_t , y_test_t)
 
 # Criando um SimpleDataModule
@@ -142,7 +142,7 @@ dm = SimpleDataModule(train ,
                            test ,
                            batch_size=32, # Tamanho dos lotes
                            num_workers=min(4, max_num_workers),
-                           validation=0.1) # Conjunto de validação será 10% do tamanho do conjunto de treino
+                           validation=0.2) # Conjunto de validação será 20% do tamanho do conjunto de treino
 
 
 #rede neural
@@ -194,13 +194,13 @@ for n_neuronio in n_neuronios:
     for n in range(n_layers):
         # Criando a rede neural
         hidden_layers = np.full(n, n_neuronio)
-        model = Network(X_s.shape[1], hidden_layers)
+        model = Network(Xs_train.shape[1], hidden_layers)
         
         # Definindo o modulo com a métrica RMSE
         module = SimpleModule.regression(model, metrics={'rmse': MeanSquaredError(squared=False)})
         
         # Objeto para salvar os arquivos logs
-        logger = CSVLogger('logs', name='white_wine')
+        logger = CSVLogger('logs', name='particulate_matter')
         
         # Treinando a rede
         n_epochs = 100

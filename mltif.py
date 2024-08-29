@@ -66,9 +66,7 @@ best_predictors = None
 for r in range(1, len(columns) + 1):
     for predictors in combinations(columns, r):
         predictors = list(predictors)
-        print(predictors)
         current_r2 = evaluate_model(no2_train, predictors)
-        print(current_r2)
         
         if current_r2 > best_r2:
             best_r2 = current_r2

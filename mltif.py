@@ -23,6 +23,7 @@ from torchinfo import summary
 from torchvision.io import read_image
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import CSVLogger
+from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 torch.manual_seed(0)
 from ISLP.torch import (SimpleDataModule , SimpleModule , ErrorTracker , rec_num_workers)
 
@@ -221,13 +222,21 @@ for fold, (train_index, test_index) in enumerate(kf.split(sub_x[0])):
                 # Objeto para salvar os arquivos logs
                 logger = CSVLogger('logs', name='particulate_matter')
                 
+                # Definindo o critério de parada temprana baseado no RMSE
+                early_stopping = EarlyStopping(
+                    monitor='val_rmse',
+                    min_delta=0.001,  # Diferencia mínima para considerar una melhoria
+                    patience=10,  # Número de épocas sem melhorar antes de parar
+                    verbose=True,
+                    mode='min'  # Queremos minimizar o RMSE
+                )
                 # Treinando a rede
                 n_epochs = 100
                 trainer = Trainer(deterministic=True,
                                   max_epochs=n_epochs, # Número de épocas
                                   log_every_n_steps=5, # Número de passos em que serão salvas informações
                                   logger=logger , # Logger em que serão salvas as informações
-                                  callbacks=[ErrorTracker()])
+                                  callbacks=[ErrorTracker(), early_stopping])
                 trainer.fit(module , datamodule=dm)
                 
                 # Avaliando a performance do modelo para o conjunto de teste
@@ -311,13 +320,22 @@ for fold, (train_index, test_index) in enumerate(kf.split(sub_x[0])):
         # Objeto para salvar os arquivos logs
         logger = CSVLogger('logs', name='particulate_matter')
         
+        # Definindo o critério de parada temprana baseado no RMSE
+        early_stopping = EarlyStopping(
+            monitor='val_rmse',
+            patience=10,  # Número de épocas sem melhorar antes de parar
+            min_delta=0.001,  # Diferencia mínima para considerar una melhoria
+            verbose=True,
+            mode='min'  # Queremos minimizar o RMSE
+        )
+        
         # Treinando a rede
         n_epochs = 100
         trainer = Trainer(deterministic=True,
                           max_epochs=n_epochs, # Número de épocas
                           log_every_n_steps=5, # Número de passos em que serão salvas informações
                           logger=logger , # Logger em que serão salvas as informações
-                          callbacks=[ErrorTracker()])
+                          callbacks=[ErrorTracker(), early_stopping])
         trainer.fit(module , datamodule=dm)
         
         # Avaliando a performance do modelo para o conjunto de teste

@@ -86,7 +86,6 @@ class Network(nn.Module):
         x = self.flatten(x)
         return torch.flatten(self.sequential(x))
     
-    
 # Função para salvar o RMSE durante o treinamento
 def summary_plot(results, ax, col='loss', valid_legend='Validation', training_legend='Training', ylabel='Loss', fontsize=20):
     for (column, color, label) in zip([f'train_{col}_epoch', f'valid_{col}'], ['black', 'red'], [training_legend, valid_legend]):
@@ -95,7 +94,6 @@ def summary_plot(results, ax, col='loss', valid_legend='Validation', training_le
     ax.set_ylabel(ylabel)
     ax.legend()
     return ax
-
 
 #inicializar o modelos
 columns = ['DIRVI', 'VELVI', 'TEMP', 'UMI', 'aerosol', 'DIST_OCEAN']
@@ -112,14 +110,11 @@ for r in range(1, len(columns) + 1):
             best_r2 = current_r2
             best_predictors = predictors
 
-
 # Usar o melhor modelo para predecir e imputar os valores faltantes
 predicted_values = predict_missing_values(no2_train, no2_missing, best_predictors)
 
 # Imputar os valores no DataFrame original
 X.loc[X['NO2'].isnull(), 'NO2'] = predicted_values
-
-
 
 # estandar
 scaler = StandardScaler()
@@ -127,13 +122,11 @@ scaler = StandardScaler()
 # Ajustar y transformar os dados
 X_s = scaler.fit_transform(X)
 
-
 # Converter o array numpy estandarizado  para um DataFrame
 Xs = pd.DataFrame(X_s, columns=X.columns, index=X.index)
 
 #olhar quando tem mudança de bairro
 bairro_changes = dados['BAIRRO'].ne(dados['BAIRRO'].shift()).cumsum()
-
 
 sub_x = []
 
@@ -141,7 +134,6 @@ sub_x = []
 for _, group in Xs.groupby(bairro_changes):
     subset = group[['DIRVI', 'VELVI', 'TEMP', 'UMI', 'aerosol','NO2','DIST_OCEAN']]
     sub_x.append(subset)
-
 
 sub_y = []
 
@@ -152,8 +144,6 @@ for _, group in dados.groupby(bairro_changes):
     subset_y = y.iloc[start_idx:end_idx]
     sub_y.append(subset_y)
     
-
-
 n_splits = 5
 best_num_layers = None
 best_num_neurons = None
@@ -198,9 +188,7 @@ for fold, (train_index, test_index) in enumerate(kf.split(sub_x[0])):
                                batch_size=32, # Tamanho dos lotes
                                num_workers=min(4, max_num_workers),
                                validation=0.2) # Conjunto de validação será 20% do tamanho do conjunto de treino
-    
-    
-    
+
     if fold == 0:
         # Testando diferentes arquiteturas de rede
         
@@ -287,7 +275,6 @@ for fold, (train_index, test_index) in enumerate(kf.split(sub_x[0])):
                     previous_model_state = model.state_dict()
                     
                 del(model , trainer , module, logger)
-    
     
         # Configure o estilo dos gráficos e use a paleta personalizada
         sns.set(style="whitegrid", palette=sns.color_palette("tab10"))

@@ -119,14 +119,11 @@ predicted_values = predict_missing_values(no2_train, no2_missing, best_predictor
 # Imputar os valores no DataFrame original
 X.loc[X['NO2'].isnull(), 'NO2'] = predicted_values
 
-
-
 # estandar
 scaler = StandardScaler()
 
 # Ajustar y transformar os dados
 X_s = scaler.fit_transform(X)
-
 
 # Converter o array numpy estandarizado  para um DataFrame
 Xs = pd.DataFrame(X_s, columns=X.columns, index=X.index)
@@ -134,14 +131,12 @@ Xs = pd.DataFrame(X_s, columns=X.columns, index=X.index)
 #olhar quando tem mudança de bairro
 bairro_changes = dados['BAIRRO'].ne(dados['BAIRRO'].shift()).cumsum()
 
-
 sub_x = []
 
 # Agrupar pelo identificador de cambio de bairro
 for _, group in Xs.groupby(bairro_changes):
     subset = group[['DIRVI', 'VELVI', 'TEMP', 'UMI', 'aerosol','NO2','DIST_OCEAN']]
     sub_x.append(subset)
-
 
 sub_y = []
 
@@ -152,7 +147,6 @@ for _, group in dados.groupby(bairro_changes):
     subset_y = y.iloc[start_idx:end_idx]
     sub_y.append(subset_y)
     
-
 # variaveis acumulativas
 accumulated_x = sub_x[0]
 accumulated_y = sub_y[0]
@@ -168,10 +162,12 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
         # Actualizar los conjuntos de datos acumulados
         accumulated_x = pd.concat([accumulated_x, sub_x[i]], axis=0)
         accumulated_y = pd.concat([accumulated_y, sub_y[i]], axis=0)
-    
+    else:
+        print(f"Iteración {i}")
+        
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
     
-    for fold, (train_index, test_index) in enumerate(kf.split(accumulated_x )):
+    for fold, (train_index, test_index) in enumerate(kf.split(accumulated_x)):
         print(f"Fold {fold + 1}")
         
         # Dividir el conjunto de datos en entrenamiento y test según las particiones de KFold
@@ -295,7 +291,6 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
                         previous_model_state = model.state_dict()
                         
                     del(model , trainer , module, logger)
-        
         
             # Configure o estilo dos gráficos e use a paleta personalizada
             sns.set(style="whitegrid", palette=sns.color_palette("tab10"))

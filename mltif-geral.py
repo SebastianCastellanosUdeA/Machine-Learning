@@ -204,7 +204,7 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
                               num_workers=min(4, max_num_workers),
                               validation=0.2) # Conjunto de validação será 20% do tamanho do conjunto de treino
      
-        if i == 1 and fold == 0:
+        if i == 0 and fold == 0:
             # Testando diferentes arquiteturas de rede
             
             n_layers = 20
@@ -227,7 +227,7 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
                     
                     # Definindo o critério de parada temprana baseado no RMSE
                     early_stopping = EarlyStopping(
-                        monitor='val_rmse',
+                        monitor='valid_rmse',
                         min_delta=0.001,  # Diferencia mínima para considerar una melhoria
                         patience=10,  # Número de épocas sem melhorar antes de parar
                         verbose=True,
@@ -257,8 +257,8 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
                                     valid_legend='Validation (=Test)')
                     #ax.set_ylim([0, 400])
                     ax.set_xticks(np.linspace(0, n_epochs, 11).astype(int));
-                    filename = f"imagens/Neural_Network/RMSE_{n}_{n_neuronio}.png"        
-                    plt.savefig(filename)        
+                    #filename = f"imagens/Neural_Network/RMSE_{n}_{n_neuronio}.png"        
+                    #plt.savefig(filename)        
                     
                     # Coloque o modelo em modo de avaliação
                     model.eval()
@@ -273,13 +273,17 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
                     rmse = np.sqrt(mse)
                     r2 = r2_score(y_test, preds)
                     
-                    data = data.append({'subconjunto': i + 1,
-                                        'Folder': fold + 1, 
-                                        'Quantidade de Layers': n,
-                                        'Número de Neurônios': n_neuronio, 
-                                        'MSE': mse, 
-                                        'RMSE': rmse, 
-                                        'R2': r2}, ignore_index=True)
+                    new_row = pd.DataFrame({
+                                            'subconjunto': [i + 1],
+                                            'Folder': [fold + 1],
+                                            'Quantidade de Layers': [n],
+                                            'Número de Neurônios': [n_neuronio],
+                                            'MSE': [mse],
+                                            'RMSE': [rmse],
+                                            'R2': [r2]
+                                        })
+
+                    data = pd.concat([data, new_row], ignore_index=True)
                     
                     # Actualizar la mejor configuración si el RMSE es menor
                     if rmse < best_rmse:
@@ -325,7 +329,7 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
             
             # Definindo o critério de parada temprana baseado no RMSE
             early_stopping = EarlyStopping(
-                monitor='val_rmse',
+                monitor='valid_rmse',
                 patience=10,  # Número de épocas sem melhorar antes de parar
                 min_delta=0.001,  # Diferencia mínima para considerar una melhoria
                 verbose=True,
@@ -356,8 +360,8 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
                             valid_legend='Validation (=Test)')
             #ax.set_ylim([0, 400])
             ax.set_xticks(np.linspace(0, n_epochs, 11).astype(int));
-            filename = f"imagens/Neural_Network/RMSE_{n}_{n_neuronio}.png"        
-            plt.savefig(filename)        
+            #filename = f"imagens/Neural_Network/RMSE_{n}_{n_neuronio}.png"        
+            #plt.savefig(filename)        
             
             # Coloque o modelo em modo de avaliação
             model.eval()
@@ -372,13 +376,19 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
             rmse = np.sqrt(mse)
             r2 = r2_score(y_test, preds)
             
-            data = data.append({'subconjunto': i + 1,
-                                'Folder': fold + 1, 
-                                'Quantidade de Layers': n,
-                                'Número de Neurônios': n_neuronio, 
-                                'MSE': mse, 
-                                'RMSE': rmse, 
-                                'R2': r2}, ignore_index=True)
+            new_row = pd.DataFrame({
+                                    'subconjunto': [i + 1],
+                                    'Folder': [fold + 1],
+                                    'Quantidade de Layers': [n],
+                                    'Número de Neurônios': [n_neuronio],
+                                    'MSE': [mse],
+                                    'RMSE': [rmse],
+                                    'R2': [r2]
+                                })
+
+            data = pd.concat([data, new_row], ignore_index=True)
     
-            previous_model_state = model.state_dict()
+            if model.state_dict():
+                previous_model_state = model.state_dict()
+            
             del(model, trainer, module, logger)

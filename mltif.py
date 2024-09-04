@@ -86,6 +86,7 @@ class Network(nn.Module):
         x = self.flatten(x)
         return torch.flatten(self.sequential(x))
     
+    
 # Função para salvar o RMSE durante o treinamento
 def summary_plot(results, ax, col='loss', valid_legend='Validation', training_legend='Training', ylabel='Loss', fontsize=20):
     for (column, color, label) in zip([f'train_{col}_epoch', f'valid_{col}'], ['black', 'red'], [training_legend, valid_legend]):
@@ -94,6 +95,7 @@ def summary_plot(results, ax, col='loss', valid_legend='Validation', training_le
     ax.set_ylabel(ylabel)
     ax.legend()
     return ax
+
 
 #inicializar o modelos
 columns = ['DIRVI', 'VELVI', 'TEMP', 'UMI', 'aerosol', 'DIST_OCEAN']
@@ -110,6 +112,7 @@ for r in range(1, len(columns) + 1):
             best_r2 = current_r2
             best_predictors = predictors
 
+
 # Usar o melhor modelo para predecir e imputar os valores faltantes
 predicted_values = predict_missing_values(no2_train, no2_missing, best_predictors)
 
@@ -124,40 +127,21 @@ X_s = scaler.fit_transform(X)
 
 # Converter o array numpy estandarizado  para um DataFrame
 Xs = pd.DataFrame(X_s, columns=X.columns, index=X.index)
-
-#olhar quando tem mudança de bairro
-bairro_changes = dados['BAIRRO'].ne(dados['BAIRRO'].shift()).cumsum()
-
-sub_x = []
-
-# Agrupar pelo identificador de cambio de bairro
-for _, group in Xs.groupby(bairro_changes):
-    subset = group[['DIRVI', 'VELVI', 'TEMP', 'UMI', 'aerosol','NO2','DIST_OCEAN']]
-    sub_x.append(subset)
-
-sub_y = []
-
-# Agrupar y pelo identificador de cambio de bairro
-for _, group in dados.groupby(bairro_changes):
-    start_idx = group.index[0]
-    end_idx = group.index[-1] + 1  # Adicionar 1 para incluir o último índice na divisão
-    subset_y = y.iloc[start_idx:end_idx]
-    sub_y.append(subset_y)
     
 n_splits = 5
 best_num_layers = None
 best_num_neurons = None
 best_rmse = np.inf
 previous_model_state = None
-
+    
 kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
-
-for fold, (train_index, test_index) in enumerate(kf.split(sub_x[0])):
+    
+for fold, (train_index, test_index) in enumerate(kf.split(Xs)):
     print(f"Fold {fold + 1}")
     
     # Dividir el conjunto de datos en entrenamiento y test según las particiones de KFold
-    X_trn, X_tst = sub_x[0].iloc[train_index], sub_x[0].iloc[test_index]
-    y_trn, y_tst = sub_y[0].iloc[train_index], sub_y[0].iloc[test_index]
+    X_trn, X_tst = Xs.iloc[train_index], Xs.iloc[test_index]
+    y_trn, y_tst = y.iloc[train_index], y.iloc[test_index]
 
     # Dividir em treinamento teste e validação
     #X_trn, X_tst, y_trn, y_tst = train_test_split(sub_x[0], sub_y[0], test_size=0.2, random_state=42)
@@ -183,12 +167,12 @@ for fold, (train_index, test_index) in enumerate(kf.split(sub_x[0])):
     
     # Criando um SimpleDataModule
     max_num_workers = rec_num_workers()
-    dm = SimpleDataModule(train ,
-                               test ,
-                               batch_size=32, # Tamanho dos lotes
-                               num_workers=min(4, max_num_workers),
-                               validation=0.2) # Conjunto de validação será 20% do tamanho do conjunto de treino
-
+    dm = SimpleDataModule(train,
+                          test,
+                          batch_size=32, # Tamanho dos lotes
+                          num_workers=min(4, max_num_workers),
+                          validation=0.2) # Conjunto de validação será 20% do tamanho do conjunto de treino
+ 
     if fold == 0:
         # Testando diferentes arquiteturas de rede
         
@@ -212,7 +196,7 @@ for fold, (train_index, test_index) in enumerate(kf.split(sub_x[0])):
                 
                 # Definindo o critério de parada temprana baseado no RMSE
                 early_stopping = EarlyStopping(
-                    monitor='val_rmse',
+                    monitor='valid_rmse',
                     min_delta=0.001,  # Diferencia mínima para considerar una melhoria
                     patience=10,  # Número de épocas sem melhorar antes de parar
                     verbose=True,
@@ -242,8 +226,8 @@ for fold, (train_index, test_index) in enumerate(kf.split(sub_x[0])):
                                 valid_legend='Validation (=Test)')
                 #ax.set_ylim([0, 400])
                 ax.set_xticks(np.linspace(0, n_epochs, 11).astype(int));
-                filename = f"imagens/Neural_Network/RMSE_{n}_{n_neuronio}.png"        
-                plt.savefig(filename)        
+                #filename = f"imagens/Neural_Network/RMSE_{n}_{n_neuronio}.png"        
+                #plt.savefig(filename)        
                 
                 # Coloque o modelo em modo de avaliação
                 model.eval()
@@ -258,12 +242,16 @@ for fold, (train_index, test_index) in enumerate(kf.split(sub_x[0])):
                 rmse = np.sqrt(mse)
                 r2 = r2_score(y_test, preds)
                 
-                data = data.append({'Folder': fold + 1, 
-                                    'Quantidade de Layers': n,
-                                    'Número de Neurônios': n_neuronio, 
-                                    'MSE': mse, 
-                                    'RMSE': rmse, 
-                                    'R2': r2}, ignore_index=True)
+                new_row = pd.DataFrame({
+                                        'Folder': [fold + 1],
+                                        'Quantidade de Layers': [n],
+                                        'Número de Neurônios': [n_neuronio],
+                                        'MSE': [mse],
+                                        'RMSE': [rmse],
+                                        'R2': [r2]
+                                    })
+
+                data = pd.concat([data, new_row], ignore_index=True)
                 
                 # Actualizar la mejor configuración si el RMSE es menor
                 if rmse < best_rmse:
@@ -309,7 +297,7 @@ for fold, (train_index, test_index) in enumerate(kf.split(sub_x[0])):
         
         # Definindo o critério de parada temprana baseado no RMSE
         early_stopping = EarlyStopping(
-            monitor='val_rmse',
+            monitor='valid_rmse',
             patience=10,  # Número de épocas sem melhorar antes de parar
             min_delta=0.001,  # Diferencia mínima para considerar una melhoria
             verbose=True,
@@ -340,8 +328,8 @@ for fold, (train_index, test_index) in enumerate(kf.split(sub_x[0])):
                         valid_legend='Validation (=Test)')
         #ax.set_ylim([0, 400])
         ax.set_xticks(np.linspace(0, n_epochs, 11).astype(int));
-        filename = f"imagens/Neural_Network/RMSE_{n}_{n_neuronio}.png"        
-        plt.savefig(filename)        
+        #filename = f"imagens/Neural_Network/RMSE_{n}_{n_neuronio}.png"        
+        #plt.savefig(filename)        
         
         # Coloque o modelo em modo de avaliação
         model.eval()
@@ -356,12 +344,18 @@ for fold, (train_index, test_index) in enumerate(kf.split(sub_x[0])):
         rmse = np.sqrt(mse)
         r2 = r2_score(y_test, preds)
         
-        data = data.append({'Folder': fold + 1, 
-                            'Quantidade de Layers': n,
-                            'Número de Neurônios': n_neuronio, 
-                            'MSE': mse, 
-                            'RMSE': rmse, 
-                            'R2': r2}, ignore_index=True)
+        new_row = pd.DataFrame({
+                                'Folder': [fold + 1],
+                                'Quantidade de Layers': [n],
+                                'Número de Neurônios': [n_neuronio],
+                                'MSE': [mse],
+                                'RMSE': [rmse],
+                                'R2': [r2]
+                            })
 
-        previous_model_state = model.state_dict()
+        data = pd.concat([data, new_row], ignore_index=True)
+
+        if model.state_dict():
+            previous_model_state = model.state_dict()
+        
         del(model, trainer, module, logger)

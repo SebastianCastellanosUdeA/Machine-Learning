@@ -172,6 +172,8 @@ for n_neuronio in n_neuronios:
         hidden_layers = np.full(n, n_neuronio)
         model = Network(Xs_train.shape[1], hidden_layers)
         
+        #optimizer
+        optimizer = RMSprop(model.parameters(), lr=0.001)
         # Definindo o modulo com a métrica RMSE
         module = SimpleModule.regression(model, metrics={'rmse': MeanSquaredError(squared=False)})
         
@@ -243,8 +245,6 @@ for n_neuronio in n_neuronios:
             best_rmse = rmse
             best_num_layers = n
             best_num_neurons = n_neuronio
-        
-        if rmse == best_rmse:
             previous_model_state = model.state_dict()
             
         del(model , trainer , module, logger)
@@ -267,6 +267,7 @@ plt.show()
 #Criar modelo geral
 n_splits = 5
 
+#kfold
 kf1 = KFold(n_splits=n_splits, shuffle=True, random_state=42)
 
 for fold, (train_index, test_index) in enumerate(kf1.split(Xs)):
@@ -303,7 +304,10 @@ for fold, (train_index, test_index) in enumerate(kf1.split(Xs)):
     hidden_layers = np.full(best_num_layers, best_num_neurons)
     model1 = Network(Xs_train.shape[1], hidden_layers)
     
-    # Cargar el estado del modelo del fold anterior
+    #optimizer
+    optimizer = RMSprop(model1.parameters(), lr=0.001)
+    
+    # Cargar el estado 
     if previous_model_state:
         model1.load_state_dict(previous_model_state)
     
@@ -364,7 +368,7 @@ for fold, (train_index, test_index) in enumerate(kf1.split(Xs)):
     
     new_row = pd.DataFrame({
                             'subconjunto': 'geral opt',
-                            'Folder': 'geral opt',
+                            'Folder': [fold + 1],
                             'Quantidade de Layers': [n],
                             'Número de Neurônios': [n_neuronio],
                             'MSE': [mse],
@@ -378,6 +382,8 @@ for fold, (train_index, test_index) in enumerate(kf1.split(Xs)):
         torch.save(model1, 'complete_model1.pth')
     
     del(model1, trainer, module, logger)
+
+
 
 
 #treinamento por localização
@@ -450,10 +456,11 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
                               num_workers=min(4, max_num_workers),
                               validation=0.2) # Conjunto de validação será 20% do tamanho do conjunto de treino
      
-
-        
         hidden_layers = np.full(best_num_layers, best_num_neurons)
         model = Network(Xs_train.shape[1], hidden_layers)
+        
+        #optimizer
+        optimizer = RMSprop(model.parameters(), lr=0.001)
         
         # Cargar el estado del modelo del fold anterior
         if previous_model_state:
@@ -531,3 +538,4 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
             torch.save(model, 'complete_model.pth')
         
         del(model, trainer, module, logger)
+        

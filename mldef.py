@@ -264,6 +264,121 @@ plt.title("RMSE por Número de Neurônios e Quantidade de Layers")
 # Mostre o gráfico
 plt.show()
 
+#Criar modelo geral
+n_splits = 5
+
+kf1 = KFold(n_splits=n_splits, shuffle=True, random_state=42)
+
+for fold, (train_index, test_index) in enumerate(kf1.split(Xs)):
+    print(f"Fold {fold + 1}")
+    
+    # Dividir el conjunto de datos en entrenamiento y test según las particiones de KFold
+    X_trn, X_tst = Xs.iloc[train_index], Xs.iloc[test_index]
+    y_trn, y_tst = y.iloc[train_index], y.iloc[test_index]
+
+    #transformar df em np
+    Xs_train = X_trn.to_numpy().astype(np.float32)
+    Xs_test = X_tst.to_numpy().astype(np.float32)
+    y_train = y_trn.to_numpy().astype(np.float32)
+    y_test = y_tst.to_numpy().astype(np.float32)
+    
+    #criar tensores
+    X_train_t = torch.tensor(Xs_train.astype(np.float32))
+    y_train_t = torch.tensor(y_train.astype(np.float32))
+    train = TensorDataset(X_train_t , y_train_t)
+    
+    X_test_t = torch.tensor(Xs_test.astype(np.float32))
+    y_test_t = torch.tensor(y_test.astype(np.float32))
+    test = TensorDataset(X_test_t , y_test_t)
+    
+    # Criando um SimpleDataModule
+    max_num_workers = rec_num_workers()
+    dm1 = SimpleDataModule(train,
+                          test,
+                          batch_size=32, # Tamanho dos lotes
+                          num_workers=min(4, max_num_workers),
+                          validation=0.2) # Conjunto de validação será 20% do tamanho do conjunto de treino
+ 
+
+    hidden_layers = np.full(best_num_layers, best_num_neurons)
+    model1 = Network(Xs_train.shape[1], hidden_layers)
+    
+    # Cargar el estado del modelo del fold anterior
+    if previous_model_state:
+        model1.load_state_dict(previous_model_state)
+    
+    # Definindo o modulo com a métrica RMSE
+    module = SimpleModule.regression(model1, metrics={'rmse': MeanSquaredError(squared=False)})
+    
+    # Objeto para salvar os arquivos logs
+    logger = CSVLogger('logs', name='particulate_matter')
+    
+    # Definindo o critério de parada temprana baseado no RMSE
+    early_stopping = EarlyStopping(
+        monitor='valid_rmse',
+        patience=10,  # Número de épocas sem melhorar antes de parar
+        min_delta=0.001,  # Diferencia mínima para considerar una melhoria
+        verbose=True,
+        mode='min'  # Queremos minimizar o RMSE
+    )
+    
+    # Treinando a rede
+    n_epochs = 100
+    trainer = Trainer(deterministic=True,
+                      max_epochs=n_epochs, # Número de épocas
+                      log_every_n_steps=5, # Número de passos em que serão salvas informações
+                      logger=logger , # Logger em que serão salvas as informações
+                      callbacks=[ErrorTracker(), early_stopping])
+    trainer.fit(module , datamodule=dm1)
+    
+    # Avaliando a performance do modelo para o conjunto de teste
+    trainer.test(module , datamodule=dm1)
+    
+    # Criando um plot de MAE (mean absolute error) em função do número de épocas
+    results2 = pd.read_csv(logger.experiment.metrics_file_path)
+    
+    plt.clf()
+    fig, ax = subplots(1, 1, figsize=(6, 6))
+    ax = summary_plot(results,
+                    ax,
+                    col='rmse',
+                    ylabel='RMSE',
+                    valid_legend='Validation (=Test)')
+    #ax.set_ylim([0, 400])
+    ax.set_xticks(np.linspace(0, n_epochs, 11).astype(int));
+    #filename = f"imagens/Neural_Network/RMSE_{n}_{n_neuronio}.png"        
+    #plt.savefig(filename)        
+    
+    # Coloque o modelo em modo de avaliação
+    model1.eval()
+
+    # Faça as previsões com o modelo
+    preds = model1(X_test_t)
+    
+    # Converta os tensores para arrays NumPy para calcular o R²
+    preds = preds.detach().cpu().numpy()
+    
+    mse = mean_squared_error(y_test,preds)
+    rmse = np.sqrt(mse)
+    r2 = r2_score(y_test, preds)
+    
+    new_row = pd.DataFrame({
+                            'subconjunto': 'geral opt',
+                            'Folder': 'geral opt',
+                            'Quantidade de Layers': [n],
+                            'Número de Neurônios': [n_neuronio],
+                            'MSE': [mse],
+                            'RMSE': [rmse],
+                            'R2': [r2]
+                        })
+
+    data = pd.concat([data, new_row], ignore_index=True)
+
+    if model1.state_dict():
+        torch.save(model1, 'complete_model1.pth')
+    
+    del(model1, trainer, module, logger)
+
 
 #treinamento por localização
 
@@ -289,7 +404,7 @@ for _, group in dados.groupby(bairro_changes):
 # variaveis acumulativas
 accumulated_x = sub_x[0]
 accumulated_y = sub_y[0]
-n_splits = 5
+
 
 
 print(f"Usando la mejor configuración: {best_num_layers} layers, {best_num_neurons} neurônios")

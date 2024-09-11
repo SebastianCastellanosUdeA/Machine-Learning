@@ -18,7 +18,7 @@ from matplotlib.pyplot import subplots
 from sklearn.pipeline import Pipeline
 import torch
 from torch import nn
-from torch.optim import RMSprop
+from torch.optim import RMSprop, Adam
 from torch.utils.data import TensorDataset
 from torchmetrics import (MeanAbsoluteError , R2Score, MeanSquaredError)
 from torchinfo import summary
@@ -162,9 +162,9 @@ dm = SimpleDataModule(train,
  
 # Testando diferentes arquiteturas de rede
     
-n_layers = 20
+n_layers = 25
 
-n_neuronios = [10, 50, 100, 200]
+n_neuronios = [1, 2, 3, 4, 5, 10, 15, 20, 30, 50]
 
 data = pd.DataFrame(columns=['subconjunto','Folder','Quantidade de Layers', 'Número de Neurônios', 'MSE', 'RMSE', 'R2'])
 
@@ -175,7 +175,7 @@ for n_neuronio in n_neuronios:
         model = Network(Xs_train.shape[1], hidden_layers)
         
         #optimizer
-        optimizer = RMSprop(model.parameters(), lr=0.001)
+        optimizer = Adam(model.parameters())
         # Definindo o modulo com a métrica RMSE
         module = SimpleModule.regression(model,optimizer=optimizer, metrics={'rmse': MeanSquaredError(squared=False)})
         
@@ -185,8 +185,8 @@ for n_neuronio in n_neuronios:
         # Definindo o critério de parada temprana baseado no RMSE
         early_stopping = EarlyStopping(
             monitor='valid_rmse',
-            min_delta=0.001,  # Diferencia mínima para considerar una melhoria
-            patience=10,  # Número de épocas sem melhorar antes de parar
+            min_delta=0.0001,  # Diferencia mínima para considerar una melhoria
+            patience=20,  # Número de épocas sem melhorar antes de parar
             verbose=True,
             mode='min'  # Queremos minimizar o RMSE
         )
@@ -310,7 +310,7 @@ for fold, (train_index, test_index) in enumerate(kf1.split(X_trn0)):
     model1 = Network(Xs_train.shape[1], hidden_layers)
     
     #optimizer
-    optimizer = RMSprop(model1.parameters(), lr=0.001)
+    optimizer = Adam(model1.parameters())
 
     # Definindo o modulo com a métrica RMSE
     module = SimpleModule.regression(model1,optimizer=optimizer, metrics={'rmse': MeanSquaredError(squared=False)})
@@ -321,8 +321,8 @@ for fold, (train_index, test_index) in enumerate(kf1.split(X_trn0)):
     # Definindo o critério de parada temprana baseado no RMSE
     early_stopping = EarlyStopping(
         monitor='valid_rmse',
-        patience=10,  # Número de épocas sem melhorar antes de parar
-        min_delta=0.001,  # Diferencia mínima para considerar una melhoria
+        patience=20,  # Número de épocas sem melhorar antes de parar
+        min_delta=0.0001,  # Diferencia mínima para considerar una melhoria
         verbose=True,
         mode='min'  # Queremos minimizar o RMSE
     )
@@ -430,7 +430,7 @@ hidden_layers = np.full(best_num_layers, best_num_neurons)
 model_f = Network(Xs_train.shape[1], hidden_layers)
 
 #optimizer
-optimizer = RMSprop(model_f.parameters(), lr=0.001)
+optimizer = Adam(model_f.parameters())
 
 # Definindo o modulo com a métrica RMSE
 module = SimpleModule.regression(model_f,optimizer=optimizer, metrics={'rmse': MeanSquaredError(squared=False)})
@@ -441,14 +441,14 @@ logger = CSVLogger('logs', name='particulate_matter')
 # Definindo o critério de parada temprana baseado no RMSE
 early_stopping = EarlyStopping(
     monitor='valid_rmse',
-    patience=10,  # Número de épocas sem melhorar antes de parar
-    min_delta=0.001,  # Diferencia mínima para considerar una melhoria
+    patience=20,  # Número de épocas sem melhorar antes de parar
+    min_delta=0.0001,  # Diferencia mínima para considerar una melhoria
     verbose=True,
     mode='min'  # Queremos minimizar o RMSE
 )
 
 # Treinando a rede
-n_epochs = 100
+n_epochs = 200
 trainer = Trainer(deterministic=True,
                   max_epochs=n_epochs, # Número de épocas
                   log_every_n_steps=5, # Número de passos em que serão salvas informações

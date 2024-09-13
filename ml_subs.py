@@ -450,7 +450,10 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
     #MODELO FINAL por LOCALIZAÇÃO
     X_train_f = pd.DataFrame(filas_a_agregar, columns=accumulated_x.columns)
     y_train_f = pd.Series(valores_a_agregar, name=accumulated_y.name)
-
+    
+    accumulated_x = copy.deepcopy(X_train_f)
+    accumulated_y = copy.deepcopy(y_train_f)
+    
     Xs_train = X_train_f.to_numpy().astype(np.float32)
     Xs_test = X_tst0.to_numpy().astype(np.float32)
     y_train = y_train_f.to_numpy().astype(np.float32)

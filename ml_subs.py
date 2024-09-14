@@ -9,6 +9,7 @@ Created on Sun Sep  8 00:00:12 2024
 import os
 import pandas as pd
 import copy
+import joblib
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import StandardScaler
@@ -133,6 +134,8 @@ scaler = StandardScaler()
 
 # Ajustar y transformar os dados
 X_s = scaler.fit_transform(X)
+
+joblib.dump(scaler, 'scaler.pkl')
 
 # Converter o array numpy estandarizado  para um DataFrame
 Xs = pd.DataFrame(X_s, columns=X.columns, index=X.index)
@@ -560,4 +563,8 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
       
 
     
-        
+# Cargar el scaler previamente guardado
+scaler = joblib.load('scaler.pkl')
+
+# Normalizar los nuevos datos usando el scaler ajustado
+X_new_scaled = scaler.transform(X)

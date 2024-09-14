@@ -37,6 +37,28 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 torch.manual_seed(0)
 from ISLP.torch import (SimpleDataModule , SimpleModule , ErrorTracker , rec_num_workers)
 
+
+
+
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+
+from pytorch_lightning.callbacks import Callback
+
+class SchedulerCallback(Callback):
+    def __init__(self, scheduler):
+        self.scheduler = scheduler
+
+    def on_validation_end(self, trainer, pl_module):
+        # Obtener el RMSE de validación
+        val_rmse = trainer.callback_metrics.get('valid_rmse')
+        if val_rmse:
+            self.scheduler.step(val_rmse)
+
+
+
+
+
+
 #criar funções
 
 #função para criar modelo de regrresão
@@ -54,7 +76,7 @@ def predict_missing_values(X_train, X_missing, best_predictors):
     return predicted_values
 
 #rede neural
-'''
+
 class Network(nn.Module):
     def __init__(self, input_size, hidden_layers):
         super(Network, self).__init__()
@@ -80,34 +102,7 @@ class Network(nn.Module):
     def forward(self, x):
         x = self.flatten(x)
         return torch.flatten(self.sequential(x))
-'''    
-#rede neural
-class Network(nn.Module):
-    def __init__(self, input_size, hidden_layers, dropout_prob=0.2):
-        super(Network, self).__init__()
-        self.flatten = nn.Flatten()
-        
-        # Crie uma lista para armazenar as camadas da rede
-        layers = []
-        in_features = input_size
-        
-        for out_features in hidden_layers:
-            # Adicione uma camada linear seguida de uma função de ativação ReLU
-            layers.append(nn.Linear(in_features, out_features))
-            #layers.append(nn.Sigmoid())
-            layers.append(nn.ReLU())  
-            layers.append(nn.Dropout(p=dropout_prob))
-            in_features = out_features  # Atualize o número de neurônios de entrada para a próxima camada
-        
-        # Adicione a camada de saída
-        layers.append(nn.Linear(in_features, 1))
-        
-        # Crie a sequência de camadas
-        self.sequential = nn.Sequential(*layers)
-    
-    def forward(self, x):
-        x = self.flatten(x)
-        return torch.flatten(self.sequential(x))
+
     
     
 # Função para salvar o RMSE durante o treinamento
@@ -213,8 +208,17 @@ for n_neuronio in n_neuronios:
         
         #optimizer
         optimizer = Adam(model.parameters())
+        
+        #scheduler
+        scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10, verbose=True)
+
         # Definindo o modulo com a métrica RMSE
-        module = SimpleModule.regression(model,optimizer=optimizer, metrics={'rmse': MeanSquaredError(squared=False)})
+        module = SimpleModule.regression(model,optimizer=optimizer, 
+                                         metrics={'rmse': MeanSquaredError(squared=False)})
+        
+        
+        scheduler_callback = SchedulerCallback(scheduler)
+        
         
         # Objeto para salvar os arquivos logs
         logger = CSVLogger('logs', name='particulate_matter')
@@ -233,7 +237,7 @@ for n_neuronio in n_neuronios:
                           max_epochs=n_epochs, # Número de épocas
                           log_every_n_steps=5, # Número de passos em que serão salvas informações
                           logger=logger , # Logger em que serão salvas as informações
-                          callbacks=[ErrorTracker(), early_stopping])
+                          callbacks=[ErrorTracker(), early_stopping, scheduler_callback])
         trainer.fit(module , datamodule=dm)
         
         # Avaliando a performance do modelo para o conjunto de teste
@@ -386,14 +390,18 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
         #optimizer
         optimizer = Adam(model.parameters())
         
-        #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50)
+        #scheduler
+        scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10, verbose=True)
 
         # Cargar el estado del modelo del fold anterior
         if previous_model_state:
             model.load_state_dict(previous_model_state)
         
         # Definindo o modulo com a métrica RMSE
-        module = SimpleModule.regression(model,optimizer=optimizer, metrics={'rmse': MeanSquaredError(squared=False)})
+        module = SimpleModule.regression(model,optimizer=optimizer, 
+                                         metrics={'rmse': MeanSquaredError(squared=False)})
+        
+        scheduler_callback = SchedulerCallback(scheduler)
         
         # Objeto para salvar os arquivos logs
         logger = CSVLogger('logs', name='particulate_matter')
@@ -413,7 +421,7 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
                           max_epochs=n_epochs, # Número de épocas
                           log_every_n_steps=5, # Número de passos em que serão salvas informações
                           logger=logger , # Logger em que serão salvas as informações
-                          callbacks=[ErrorTracker(), early_stopping])
+                          callbacks=[ErrorTracker(), early_stopping, scheduler_callback])
         trainer.fit(module , datamodule=dm)
         
         # Avaliando a performance do modelo para o conjunto de teste
@@ -483,10 +491,10 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
     X_train_f = pd.DataFrame(filas_a_agregar, columns=accumulated_x.columns)
     y_train_f = pd.Series(valores_a_agregar, name=accumulated_y.name)
     
-    '''
+    
     accumulated_x = copy.deepcopy(X_train_f)
     accumulated_y = copy.deepcopy(y_train_f)
-    '''
+    
     
     Xs_train = X_train_f.to_numpy().astype(np.float32)
     Xs_test = X_tst0.to_numpy().astype(np.float32)
@@ -515,6 +523,9 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
     #optimizer
     optimizer = Adam(model_f.parameters())
     
+    #scheduler
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10, verbose=True)
+
     #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50)
     
     # Cargar el estado del modelo del fold anterior
@@ -522,8 +533,11 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
         model_f.load_state_dict(previous_model_state)
 
     # Definindo o modulo com a métrica RMSE
-    module = SimpleModule.regression(model_f,optimizer=optimizer, metrics={'rmse': MeanSquaredError(squared=False)})
-
+    module = SimpleModule.regression(model_f,optimizer=optimizer, 
+                                     metrics={'rmse': MeanSquaredError(squared=False)})
+    
+    scheduler_callback = SchedulerCallback(scheduler)
+        
     # Objeto para salvar os arquivos logs
     logger = CSVLogger('logs', name='particulate_matter')
 
@@ -542,7 +556,7 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
                       max_epochs=n_epochs, # Número de épocas
                       log_every_n_steps=5, # Número de passos em que serão salvas informações
                       logger=logger , # Logger em que serão salvas as informações
-                      callbacks=[ErrorTracker(), early_stopping])
+                      callbacks=[ErrorTracker(), early_stopping, scheduler_callback])
     trainer.fit(module , datamodule=dm1)
 
     # Avaliando a performance do modelo para o conjunto de teste

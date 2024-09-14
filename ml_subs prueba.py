@@ -91,6 +91,8 @@ class Network(nn.Module):
             layers.append(nn.Linear(in_features, out_features))
             #layers.append(nn.Sigmoid())
             layers.append(nn.ReLU())  
+            #layers.append(nn.LeakyReLU())
+            #layers.append(nn.ELU())
             in_features = out_features  # Atualize o número de neurônios de entrada para a próxima camada
         
         # Adicione a camada de saída

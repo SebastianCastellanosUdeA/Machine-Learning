@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 """
+Created on Mon Sep 16 19:40:02 2024
+
+@author: sebas
+"""
+
+# -*- coding: utf-8 -*-
+"""
 Created on Sun Sep  8 00:00:12 2024
 
 @author: sebas
@@ -36,25 +43,7 @@ from pytorch_lightning.loggers import CSVLogger
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 torch.manual_seed(0)
 from ISLP.torch import (SimpleDataModule , SimpleModule , ErrorTracker , rec_num_workers)
-from scipy import stats
 
-
-
-#criar funções
-
-#função para criar modelo de regrresão
-def evaluate_model(X_train, predictors):
-    model = LinearRegression()
-    model.fit(X_train[predictors], X_train['NO2'])
-    predictions = model.predict(X_train[predictors])
-    return r2_score(X_train['NO2'], predictions)
-
-#função para predecir dados faltantes
-def predict_missing_values(X_train, X_missing, best_predictors):
-    model = LinearRegression()
-    model.fit(X_train[best_predictors], X_train['NO2'])
-    predicted_values = model.predict(X_missing[best_predictors])
-    return predicted_values
 
 #rede neural
 
@@ -99,53 +88,20 @@ def summary_plot(results, ax, col='loss', valid_legend='Validation', training_le
 
 # Leer os dados
 dadosi = pd.read_excel("input.xlsx")
+dadosi['NO2'] = pd.to_numeric(dadosi['NO2'], errors='coerce')
+
+# Eliminar las filas donde 'NO2' es NaN
+dados = dadosi.dropna(subset=['NO2'])
+
+# Reiniciar los índices
+dados = dados.reset_index(drop=True)
+
 # Seleccionar as colunas de entrada (features) y a coluna de saida (target)
-Xi = dadosi[['DIRVI', 'VELVI', 'TEMP', 'UMI', 'aerosol','NO2','DIST_OCEAN']]
-yi = dadosi['PM25']
-
-#assegurar que NO2 é númerico
-Xi['NO2'] = pd.to_numeric(Xi['NO2'], errors='coerce')
-
-'''
-Como realizou-se o preenchumento de dados faltantes:
-dir vento - colocou-se média da estaçao
-vel vento - média no mesmo ano
-'''
-#olhar os dados faltantes
-no2_train = Xi.dropna(subset=['NO2'])
-no2_missing = Xi[Xi['NO2'].isnull()]
-
-#inicializar o modelos
-columns = ['DIRVI', 'VELVI', 'TEMP', 'UMI', 'aerosol', 'DIST_OCEAN']
-best_r2 = -np.inf
-best_predictors = None
-
-# Probar todas as combinações posiveis da regressão
-for r in range(1, len(columns) + 1):
-    for predictors in combinations(columns, r):
-        predictors = list(predictors)
-        current_r2 = evaluate_model(no2_train, predictors)
-        
-        if current_r2 > best_r2:
-            best_r2 = current_r2
-            best_predictors = predictors
-
-# Usar o melhor modelo para predecir e imputar os valores faltantes
-predicted_values = predict_missing_values(no2_train, no2_missing, best_predictors)
-
-# Imputar os valores no DataFrame original
-Xi.loc[Xi['NO2'].isnull(), 'NO2'] = predicted_values
-
-
-datos_completos = pd.concat([Xi, yi], axis=1)
-
-z_scores = np.abs(stats.zscore(datos_completos))
-dados = datos_completos[(z_scores < 3).all(axis=1)] 
-barrios_filtrados = dadosi.loc[dados.index, 'BAIRRO']
-dados['barrios'] = barrios_filtrados
-
 X = dados[['DIRVI', 'VELVI', 'TEMP', 'UMI', 'aerosol','NO2','DIST_OCEAN']]
 y = dados['PM25']
+
+#assegurar que NO2 é númerico
+
 
 # estandar
 scaler = StandardScaler()
@@ -208,7 +164,7 @@ for n_neuronio in n_neuronios:
         module = SimpleModule.regression(model,optimizer=optimizer, 
                                          metrics={'rmse': MeanSquaredError(squared=False)})
         
-        
+
         
         # Objeto para salvar os arquivos logs
         logger = CSVLogger('logs', name='particulate_matter')
@@ -304,7 +260,7 @@ n_splits = 5
 #treinamento por localização
 
 #olhar quando tem mudança de bairro, FÁTIMA E MOURA BRASIL TEM POUCOS DADOS
-dados_modificado = dados['barrios'].replace({'FÁTIMA': 'IGNORAR', 'MOURA BRASIL': 'IGNORAR'})
+dados_modificado = dados['BAIRRO'].replace({'FÁTIMA': 'IGNORAR', 'MOURA BRASIL': 'IGNORAR'})
 
 bairro_changes = dados_modificado.ne(dados_modificado.shift()).cumsum()
 
@@ -315,15 +271,14 @@ for _, group in Xs.groupby(bairro_changes):
     subset = group[['DIRVI', 'VELVI', 'TEMP', 'UMI', 'aerosol','NO2','DIST_OCEAN']]
     sub_x.append(subset)
 
-bairro_changes_y = bairro_changes.loc[y.index]
-
 sub_y = []
 
 # Agrupar y pelo identificador de cambio de bairro
-for _, group in y.groupby(bairro_changes_y):
-    sub_y.append(group)
-
-    
+for _, group in dados.groupby(bairro_changes):
+    start_idx = group.index[0]
+    end_idx = group.index[-1] + 1  # Adicionar 1 para incluir o último índice na divisão
+    subset_y = y.iloc[start_idx:end_idx]
+    sub_y.append(subset_y)
     
 # variaveis acumulativas
 accumulated_x = sub_x[0]
@@ -380,7 +335,7 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
         
         #optimizer
         optimizer = Adam(model.parameters())
-        
+
 
         # Cargar el estado del modelo del fold anterior
         if previous_model_state:
@@ -390,7 +345,7 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
         module = SimpleModule.regression(model,optimizer=optimizer, 
                                          metrics={'rmse': MeanSquaredError(squared=False)})
         
-        
+
         # Objeto para salvar os arquivos logs
         logger = CSVLogger('logs', name='particulate_matter')
         
@@ -511,7 +466,6 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
     #optimizer
     optimizer = Adam(model_f.parameters())
     
-
     #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50)
     
     # Cargar el estado del modelo del fold anterior

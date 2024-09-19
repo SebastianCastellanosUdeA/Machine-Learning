@@ -9,6 +9,7 @@ Created on Sun Sep  8 00:00:12 2024
 import os
 import pandas as pd
 import copy
+import joblib
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import StandardScaler
@@ -25,7 +26,6 @@ from matplotlib.pyplot import subplots
 from sklearn.pipeline import Pipeline
 import torch
 from torch import nn
-import torch.nn.functional as F
 from torch.optim import RMSprop, Adam
 from torch.utils.data import TensorDataset
 from torchmetrics import (MeanAbsoluteError , R2Score, MeanSquaredError)
@@ -36,9 +36,6 @@ from pytorch_lightning.loggers import CSVLogger
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 torch.manual_seed(0)
 from ISLP.torch import (SimpleDataModule , SimpleModule , ErrorTracker , rec_num_workers)
-from scipy import stats
-
-
 
 #criar funções
 
@@ -57,7 +54,6 @@ def predict_missing_values(X_train, X_missing, best_predictors):
     return predicted_values
 
 #rede neural
-
 class Network(nn.Module):
     def __init__(self, input_size, hidden_layers):
         super(Network, self).__init__()
@@ -72,8 +68,6 @@ class Network(nn.Module):
             layers.append(nn.Linear(in_features, out_features))
             #layers.append(nn.Sigmoid())
             layers.append(nn.ReLU())  
-            #layers.append(nn.LeakyReLU())
-            #layers.append(nn.ELU())
             in_features = out_features  # Atualize o número de neurônios de entrada para a próxima camada
         
         # Adicione a camada de saída
@@ -85,7 +79,6 @@ class Network(nn.Module):
     def forward(self, x):
         x = self.flatten(x)
         return torch.flatten(self.sequential(x))
-
     
     
 # Função para salvar o RMSE durante o treinamento
@@ -98,10 +91,10 @@ def summary_plot(results, ax, col='loss', valid_legend='Validation', training_le
     return ax
 
 # Leer os dados
-dadosi = pd.read_excel("input.xlsx")
+dados = pd.read_excel("input.xlsx")
 # Seleccionar as colunas de entrada (features) y a coluna de saida (target)
-Xi = dadosi[['DIRVI', 'VELVI', 'TEMP', 'UMI', 'aerosol','NO2','DIST_OCEAN']]
-yi = dadosi['PM25']
+Xi = dados[['DIRVI', 'VELVI', 'TEMP', 'UMI', 'aerosol','NO2','DIST_OCEAN']]
+y = dados['PM25']
 
 #assegurar que NO2 é númerico
 Xi['NO2'] = pd.to_numeric(Xi['NO2'], errors='coerce')
@@ -136,22 +129,16 @@ predicted_values = predict_missing_values(no2_train, no2_missing, best_predictor
 # Imputar os valores no DataFrame original
 Xi.loc[Xi['NO2'].isnull(), 'NO2'] = predicted_values
 
-
-datos_completos = pd.concat([Xi, yi], axis=1)
-
-z_scores = np.abs(stats.zscore(datos_completos))
-dados = datos_completos[(z_scores < 3).all(axis=1)] 
-barrios_filtrados = dadosi.loc[dados.index, 'BAIRRO']
-dados['barrios'] = barrios_filtrados
-
-X = dados[['DIRVI', 'VELVI', 'TEMP', 'UMI', 'aerosol','NO2','DIST_OCEAN']]
-y = dados['PM25']
+#escolher as variaveis
+X = Xi[['DIRVI', 'aerosol', 'UMI','VELVI','DIST_OCEAN']]
 
 # estandar
 scaler = StandardScaler()
 
 # Ajustar y transformar os dados
 X_s = scaler.fit_transform(X)
+
+joblib.dump(scaler, 'scaler.pkl')
 
 # Converter o array numpy estandarizado  para um DataFrame
 Xs = pd.DataFrame(X_s, columns=X.columns, index=X.index)
@@ -202,13 +189,9 @@ for n_neuronio in n_neuronios:
         
         #optimizer
         optimizer = Adam(model.parameters())
-        
-
         # Definindo o modulo com a métrica RMSE
-        module = SimpleModule.regression(model,optimizer=optimizer, 
+        module = SimpleModule.regression(model,optimizer=optimizer,
                                          metrics={'rmse': MeanSquaredError(squared=False)})
-        
-        
         
         # Objeto para salvar os arquivos logs
         logger = CSVLogger('logs', name='particulate_matter')
@@ -304,7 +287,7 @@ n_splits = 5
 #treinamento por localização
 
 #olhar quando tem mudança de bairro, FÁTIMA E MOURA BRASIL TEM POUCOS DADOS
-dados_modificado = dados['barrios'].replace({'FÁTIMA': 'IGNORAR', 'MOURA BRASIL': 'IGNORAR'})
+dados_modificado = dados['BAIRRO'].replace({'FÁTIMA': 'IGNORAR', 'MOURA BRASIL': 'IGNORAR'})
 
 bairro_changes = dados_modificado.ne(dados_modificado.shift()).cumsum()
 
@@ -312,18 +295,17 @@ sub_x = []
 
 # Agrupar pelo identificador de cambio de bairro
 for _, group in Xs.groupby(bairro_changes):
-    subset = group[['DIRVI', 'VELVI', 'TEMP', 'UMI', 'aerosol','NO2','DIST_OCEAN']]
+    subset = group[['DIRVI', 'aerosol', 'UMI','VELVI','DIST_OCEAN']]
     sub_x.append(subset)
-
-bairro_changes_y = bairro_changes.loc[y.index]
 
 sub_y = []
 
 # Agrupar y pelo identificador de cambio de bairro
-for _, group in y.groupby(bairro_changes_y):
-    sub_y.append(group)
-
-    
+for _, group in dados.groupby(bairro_changes):
+    start_idx = group.index[0]
+    end_idx = group.index[-1] + 1  # Adicionar 1 para incluir o último índice na divisão
+    subset_y = y.iloc[start_idx:end_idx]
+    sub_y.append(subset_y)
     
 # variaveis acumulativas
 accumulated_x = sub_x[0]
@@ -380,16 +362,13 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
         
         #optimizer
         optimizer = Adam(model.parameters())
-        
 
         # Cargar el estado del modelo del fold anterior
         if previous_model_state:
             model.load_state_dict(previous_model_state)
         
         # Definindo o modulo com a métrica RMSE
-        module = SimpleModule.regression(model,optimizer=optimizer, 
-                                         metrics={'rmse': MeanSquaredError(squared=False)})
-        
+        module = SimpleModule.regression(model,optimizer=optimizer, metrics={'rmse': MeanSquaredError(squared=False)})
         
         # Objeto para salvar os arquivos logs
         logger = CSVLogger('logs', name='particulate_matter')
@@ -479,10 +458,8 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
     X_train_f = pd.DataFrame(filas_a_agregar, columns=accumulated_x.columns)
     y_train_f = pd.Series(valores_a_agregar, name=accumulated_y.name)
     
-    
     accumulated_x = copy.deepcopy(X_train_f)
     accumulated_y = copy.deepcopy(y_train_f)
-    
     
     Xs_train = X_train_f.to_numpy().astype(np.float32)
     Xs_test = X_tst0.to_numpy().astype(np.float32)
@@ -511,18 +488,13 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
     #optimizer
     optimizer = Adam(model_f.parameters())
     
-
-    #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50)
-    
     # Cargar el estado del modelo del fold anterior
     if previous_model_state:
         model_f.load_state_dict(previous_model_state)
 
     # Definindo o modulo com a métrica RMSE
-    module = SimpleModule.regression(model_f,optimizer=optimizer, 
-                                     metrics={'rmse': MeanSquaredError(squared=False)})
-    
-        
+    module = SimpleModule.regression(model_f,optimizer=optimizer, metrics={'rmse': MeanSquaredError(squared=False)})
+
     # Objeto para salvar os arquivos logs
     logger = CSVLogger('logs', name='particulate_matter')
 
@@ -592,7 +564,9 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
     
     if i < (len(sub_x) - 1):
         del(model_f, trainer, module, logger)
-      
-
     
-        
+# Cargar el scaler previamente guardado
+scaler = joblib.load('scaler.pkl')
+
+# Normalizar los nuevos datos usando el scaler ajustado
+X_new_scaled = scaler.transform(X)

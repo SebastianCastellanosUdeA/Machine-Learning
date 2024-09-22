@@ -565,8 +565,44 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
     if i < (len(sub_x) - 1):
         del(model_f, trainer, module, logger)
     
-# Cargar el scaler previamente guardado
-scaler = joblib.load('scaler.pkl')
+    
+# Guardar el estado del modelo junto con el optimizador
+checkpoint = {
+    'model_state_dict': model_f.state_dict(),
+    'optimizer_state_dict': optimizer.state_dict(),
+    'epoch': n_epochs,  
+}
 
-# Normalizar los nuevos datos usando el scaler ajustado
-X_new_scaled = scaler.transform(X)
+torch.save(checkpoint, 'modelo_entrenado_completo.pth')
+
+#Cargar los nuevos datos
+nuevos_datos = pd.read_excel("nuevos.xlsx")
+
+# Cargar el escalador usado en el entrenamiento
+scaler = joblib.load('scaler.pkl')
+nuevos_datos_escalados = scaler.transform(nuevos_datos)
+
+# Convertir los datos a tensores
+nuevos_datos_t = torch.tensor(nuevos_datos_escalados.astype(np.float32))
+
+#  Cargar el modelo entrenado
+model_f = Network(nuevos_datos_t.shape[1], hidden_layers)
+optimizer = Adam(model_f.parameters())
+checkpoint = torch.load('modelo_entrenado_completo.pth')
+model_f.load_state_dict(checkpoint['model_state_dict'])
+optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+model_f.eval()  # Poner el modelo en modo de evaluación
+
+# Hacer las predicciones
+with torch.no_grad():  # Desactivar el cálculo del gradiente
+    predicciones = model_f(nuevos_datos_t)
+
+#Convertir las predicciones a un formato usable
+predicciones = predicciones.detach().cpu().numpy()
+
+# Mostrar las predicciones
+print(predicciones)
+
+# Guardar las predicciones en un archivo CSV si es necesario
+predicciones_df = pd.DataFrame(predicciones, columns=['Prediccion_MP2.5'])
+predicciones_df.to_excel('predicciones_nuevos_datos.xlsx', index=False)

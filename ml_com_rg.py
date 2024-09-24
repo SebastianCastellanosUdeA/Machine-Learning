@@ -92,6 +92,15 @@ def summary_plot(results, ax, col='loss', valid_legend='Validation', training_le
 
 # Leer os dados
 dados = pd.read_excel("input.xlsx")
+
+#treinamento por localização
+
+#olhar quando tem mudança de bairro, FÁTIMA E MOURA BRASIL TEM POUCOS DADOS
+dados_modificado = dados['BAIRRO'].replace({'FÁTIMA': 'IGNORAR', 'MOURA BRASIL': 'IGNORAR'})
+
+bairro_changes = dados_modificado.ne(dados_modificado.shift()).cumsum()
+dados['bairro_changes'] = bairro_changes
+
 # Seleccionar as colunas de entrada (features) y a coluna de saida (target)
 Xi = dados[['DIRVI', 'VELVI', 'TEMP', 'UMI', 'aerosol','NO2','DIST_OCEAN']]
 y = dados['PM25']
@@ -130,7 +139,7 @@ predicted_values = predict_missing_values(no2_train, no2_missing, best_predictor
 Xi.loc[Xi['NO2'].isnull(), 'NO2'] = predicted_values
 
 #escolher as variaveis
-X = Xi[['DIRVI', 'aerosol', 'UMI','VELVI','DIST_OCEAN']]
+X = Xi[['DIRVI', 'aerosol', 'UMI','VELVI','DIST_OCEAN','TEMP' ]]
 
 # estandar
 scaler = StandardScaler()
@@ -143,12 +152,39 @@ joblib.dump(scaler, 'scaler.pkl')
 # Converter o array numpy estandarizado  para um DataFrame
 Xs = pd.DataFrame(X_s, columns=X.columns, index=X.index)
 
+
+X_trn0, X_tst0, y_trn0, y_tst0 = train_test_split(Xs, y, test_size=0.3, random_state=42)
+
+# Identificar los cambios de barrio en el conjunto de entrenamiento
+bairro_changes_train = bairro_changes.loc[X_trn0.index]
+
+bairro_changes_trn = bairro_changes_train.sort_index()
+X_sorted = X_trn0.sort_index()
+y_sorted = y_trn0.sort_index()
+
+
+# Crear subconjuntos solo con los datos de entrenamiento
+sub_x = []
+for _, group in X_sorted.groupby(bairro_changes_trn):
+    subset = group[['DIRVI', 'aerosol', 'UMI','VELVI','DIST_OCEAN','TEMP' ]]  # Ajustar las columnas seleccionadas según corresponda
+    sub_x.append(subset)
+
+sub_y = []
+for _, group in y_sorted.groupby(bairro_changes_trn):
+    subset_y = group  # No necesitas utilizar índices, ya que el group ya está alineado
+    sub_y.append(subset_y)
+    
+    
+# variaveis acumulativas
+accumulated_x = sub_x[0]
+accumulated_y = sub_y[0]
+
+
 #optimizar o número de neuronios 
 best_num_layers = None
 best_num_neurons = None
 best_rmse = np.inf
 
-X_trn0, X_tst0, y_trn0, y_tst0 = train_test_split(Xs, y, test_size=0.3, random_state=42)
 
 #transformar df em np
 Xs_train = X_trn0.to_numpy().astype(np.float32)
@@ -178,6 +214,7 @@ dm = SimpleDataModule(train,
 n_layers = 20
 
 n_neuronios = [1, 2, 3, 4, 5, 10, 15, 20, 30, 50]
+
 
 data = pd.DataFrame(columns=['subconjunto','Folder','Quantidade de Layers', 'Número de Neurônios', 'MSE', 'RMSE', 'R2'])
 
@@ -284,32 +321,6 @@ plt.show()
 #Criar modelo 
 n_splits = 5
 
-#treinamento por localização
-
-#olhar quando tem mudança de bairro, FÁTIMA E MOURA BRASIL TEM POUCOS DADOS
-dados_modificado = dados['BAIRRO'].replace({'FÁTIMA': 'IGNORAR', 'MOURA BRASIL': 'IGNORAR'})
-
-bairro_changes = dados_modificado.ne(dados_modificado.shift()).cumsum()
-
-sub_x = []
-
-# Agrupar pelo identificador de cambio de bairro
-for _, group in Xs.groupby(bairro_changes):
-    subset = group[['DIRVI', 'aerosol', 'UMI','VELVI','DIST_OCEAN']]
-    sub_x.append(subset)
-
-sub_y = []
-
-# Agrupar y pelo identificador de cambio de bairro
-for _, group in dados.groupby(bairro_changes):
-    start_idx = group.index[0]
-    end_idx = group.index[-1] + 1  # Adicionar 1 para incluir o último índice na divisão
-    subset_y = y.iloc[start_idx:end_idx]
-    sub_y.append(subset_y)
-    
-# variaveis acumulativas
-accumulated_x = sub_x[0]
-accumulated_y = sub_y[0]
 
 print(f"Usando la mejor configuración: {best_num_layers} layers, {best_num_neurons} neurônios")
 
@@ -411,8 +422,8 @@ for i in range(len(sub_x)):  # Empezamos desde sub_x[0] y sub_y[0]
         new_row = pd.DataFrame({
                                 'subconjunto': [i + 1],
                                 'Folder': [fold + 1],
-                                'Quantidade de Layers': [n],
-                                'Número de Neurônios': [n_neuronio],
+                                'Quantidade de Layers': [best_num_layers],
+                                'Número de Neurônios': [best_num_neurons],
                                 'MSE': [mse],
                                 'RMSE': [rmse],
                                 'R2': [r2]

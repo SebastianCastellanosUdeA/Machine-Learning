@@ -3,13 +3,11 @@ import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
-
-
-
-
+import matplotlib.pyplot as plt
 
 # Leer excel
-data = pd.read_excel('sem_aerosol.xlsx')
+#data = pd.read_excel('sem_aerosol.xlsx')
+data = pd.read_excel('com_aerosol.xlsx')
 
 # Normalizar el nombre de las columnas
 data.columns = data.columns.str.lower().str.replace(' ', '_')
@@ -19,18 +17,17 @@ data.columns = data.columns.str.lower().str.replace(' ', '_')
 data.head()
 
 
-
-
 # Paso 0: Definir variables de entrada y salida (predicción)
-X = data.drop('pm25', axis=1)
+columnas_a_eliminar = ['pm25','no2','ano']
+X = data.drop(columnas_a_eliminar, axis=1)
 y = data['pm25']
 
 # Paso 1: Dividir los datos en conjuntos de entrenamiento, validación y prueba
 # Conjunto de entrenamiento (X_train, y_train): usado para entrenar el modelo.
 # Conjunto de validación (X_val, y_val): usado para ajustar los hiperparámetros y evitar el sobreajuste.
 # Conjunto de prueba (X_test, y_test): usado para evaluar el rendimiento final del modelo.
-X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=0.2, random_state=42)
-X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)  # 50% para validación y 50% para prueba
+X_temp, X_test, y_temp, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+X_train, X_val, y_train, y_val = train_test_split(X_temp, y_temp, test_size=0.2, random_state=42)  # 50% para validación y 50% para prueba
 
 
 # Paso 2: Definir el espacio de búsqueda de hiperparámetros
@@ -76,6 +73,24 @@ test_r2 = r2_score(y_test, best_model.predict(X_test))
 print(f'Mean Squared Error en el conjunto de prueba: {test_mse:.2f}')
 print(f'R^2 en el conjunto de prueba: {test_r2:.2f}')
 
+# Extraer la importancia de las características del mejor modelo
+importances = best_model.feature_importances_
+
+# Crear un dataframe con las características y su importancia
+feature_importance = pd.DataFrame({'Variable': X_train.columns, 'Importance': importances})
+
+# Ordenar las características según su importancia de mayor a menor
+feature_importance = feature_importance.sort_values(by='Importance', ascending=False)
+
+
+# Graficar las importancias
+plt.figure(figsize=(10, 6))
+plt.barh(feature_importance['Variable'], feature_importance['Importance'])
+plt.xlabel('Importance')
+plt.ylabel('Variables')
+plt.title('Importance Random Forest features')
+plt.gca().invert_yaxis()  # Invertir el eje Y para que la característica más importante esté en la parte superior
+plt.show()
 
 
 
@@ -93,14 +108,6 @@ print(f'R^2 en el conjunto de prueba: {test_r2:.2f}')
 # for i in range(len(results['params'])):
 #     print(f"Parámetros: {results['params'][i]}, Media MSE: {-results['mean_test_score'][i]:.2f}, Desviación estándar: {results['std_test_score'][i]:.2f}")
 
-
-
-
-
-
-
-
-import matplotlib.pyplot as plt
 
 
 y_pred = best_model.predict(X_test)

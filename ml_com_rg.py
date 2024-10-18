@@ -102,7 +102,7 @@ bairro_changes = dados_modificado.ne(dados_modificado.shift()).cumsum()
 dados['bairro_changes'] = bairro_changes
 
 # Seleccionar as colunas de entrada (features) y a coluna de saida (target)
-Xi = dados[['DIRVI', 'VELVI', 'TEMP', 'UMI', 'aerosol','NO2','DIST_OCEAN']]
+Xi = dados[['NO2','DIRVI', 'VELVI', 'TEMP', 'UMI', 'aerosol','DIST_OCEAN','LAT','LONG','ANO']]
 y = dados['PM25']
 
 #assegurar que NO2 é númerico
@@ -118,7 +118,7 @@ no2_train = Xi.dropna(subset=['NO2'])
 no2_missing = Xi[Xi['NO2'].isnull()]
 
 #inicializar o modelos
-columns = ['DIRVI', 'VELVI', 'TEMP', 'UMI', 'aerosol', 'DIST_OCEAN']
+columns = ['DIRVI', 'VELVI', 'TEMP', 'UMI', 'aerosol','DIST_OCEAN','LAT','LONG','ANO']
 best_r2 = -np.inf
 best_predictors = None
 
@@ -139,7 +139,7 @@ predicted_values = predict_missing_values(no2_train, no2_missing, best_predictor
 Xi.loc[Xi['NO2'].isnull(), 'NO2'] = predicted_values
 
 #escolher as variaveis
-X = Xi[['DIRVI', 'aerosol', 'UMI','VELVI','DIST_OCEAN','TEMP' ]]
+X = Xi[['DIRVI', 'VELVI', 'TEMP', 'UMI', 'aerosol','DIST_OCEAN','ANO' ]]
 
 # estandar
 scaler = StandardScaler()
@@ -166,7 +166,7 @@ y_sorted = y_trn0.sort_index()
 # Crear subconjuntos solo con los datos de entrenamiento
 sub_x = []
 for _, group in X_sorted.groupby(bairro_changes_trn):
-    subset = group[['DIRVI', 'aerosol', 'UMI','VELVI','DIST_OCEAN','TEMP' ]]  # Ajustar las columnas seleccionadas según corresponda
+    subset = group[['DIRVI', 'VELVI', 'TEMP', 'UMI', 'aerosol','DIST_OCEAN','ANO']]  # Ajustar las columnas seleccionadas según corresponda
     sub_x.append(subset)
 
 sub_y = []

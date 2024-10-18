@@ -22,15 +22,16 @@ ee.Initialize(project='ee-projectsebas')
 # In[7]:
 
 
-asset_path = 'projects/ee-projectsebas/assets/Contorno'
+asset_path = 'projects/ee-projectsebas/assets/limites_fortaleza'
 Contorno = ee.FeatureCollection(asset_path)
 
 # Configurações iniciais para testar os 6 primeiros meses de 2024
 startYear = 2022 # Ano inicial
 endYear = 2022 # Ano final
 endMonthInEndYear = 6 # Limitar até o mês de junho de 2024
-region = ee.Geometry.Rectangle([-38.65, -3.9, -38.38, -3.68]) 
+
 maxPixelsExport = 1e13 # Limite de pixels para exportação
+region = Contorno
 
 # Función para generar fechas con formato correcto (añadida la hora)
 def formatDate(year, month, day, hour):
@@ -44,39 +45,47 @@ def getHourlyAerosolImage(year, month, day, hour):
     
     
     # Filtrar la colección por la hora y calcular la media horaria
-    hourlyImage = ee.ImageCollection('COPERNICUS/S5P/OFFL/L3_NO2') \
-                    .select('tropospheric_NO2_column_number_density') \
-                    .filterDate(firstDate, lastDate) \
-                    .mean()
+    hourlyImage = ee.ImageCollection('COPERNICUS/S5P/OFFL/L3_NO2').select('tropospheric_NO2_column_number_density').filterDate(firstDate, lastDate).mean()
 
     return hourlyImage.clip(region)  # Retorna la imagen recortada para la región
 
 
 # Función para exportar imágenes
 def exportImage(image, year, month, day, hour):
-    exportName = f'NO2_{year}_{month:02d}_{day:02d}_{hour:02d}h'
+    exportName = f'no2t_{year}_{month:02d}_{day:02d}_{hour:02d}h'
     print(f'Comenzando a exportar {exportName}...')
     task = ee.batch.Export.image.toDrive(
         image=image,
         description=exportName,
         folder="GEE_no2",
-        region=region,
+        region=region.geometry(),
         crs='EPSG:4326',
+        scale = 10,
         maxPixels=maxPixelsExport
     )
     task.start()
 
 # Loop por años, meses, días y horas para exportar imágenes horarias
 for year in range(startYear, endYear + 1):
-    for month in range(1, 2):# De enero a diciembre
+    for month in range(2, 3):# De enero a diciembre
         # Determina los días del mes
         days_in_month = monthrange(year, month)[1]
         #for day in range(1, days_in_month + 1):  # De 1 al último día del mes
-        for day in range(1, 2):
+        for day in range(1, 29):
             for hour in range(0, 24):  # De 0 a 23 horas
                 hourlyImage = getHourlyAerosolImage(year, month, day, hour)  # Obtiene la imagen horaria
                 exportImage(hourlyImage, year, month, day, hour)  # Exporta la imagen
 
 
+# Loop por años, meses, días y horas para exportar imágenes horarias
+for year in range(startYear, endYear + 1):
+    for month in range(3, 4):# De enero a diciembre
+        # Determina los días del mes
+        days_in_month = monthrange(year, month)[1]
+        #for day in range(1, days_in_month + 1):  # De 1 al último día del mes
+        for day in range(1, 32):
+            for hour in range(0, 24):  # De 0 a 23 horas
+                hourlyImage = getHourlyAerosolImage(year, month, day, hour)  # Obtiene la imagen horaria
+                exportImage(hourlyImage, year, month, day, hour)  # Exporta la imagen
 
 

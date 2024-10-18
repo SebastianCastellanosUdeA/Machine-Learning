@@ -106,7 +106,7 @@ dados['bairro_changes'] = bairro_changes
 y = dados['PM25']
 
 #escolher as variaveis
-X = dados[['DIRVI', 'aerosol', 'UMI','VELVI','DIST_OCEAN']]
+X = dados[['DIRVI', 'aerosol', 'UMI','VELVI','DIST_OCEAN', 'NO2','TEMP']]
 
 # estandar
 scaler = StandardScaler()
@@ -133,7 +133,7 @@ y_sorted = y_trn0.sort_index()
 # Crear subconjuntos solo con los datos de entrenamiento
 sub_x = []
 for _, group in X_sorted.groupby(bairro_changes_trn):
-    subset = group[['DIRVI', 'aerosol', 'UMI','VELVI','DIST_OCEAN']]  # Ajustar las columnas seleccionadas según corresponda
+    subset = group[['DIRVI', 'aerosol', 'UMI','VELVI','DIST_OCEAN','NO2','TEMP']]  # Ajustar las columnas seleccionadas según corresponda
     sub_x.append(subset)
 
 sub_y = []
@@ -151,6 +151,7 @@ accumulated_y = sub_y[0]
 best_num_layers = None
 best_num_neurons = None
 best_rmse = np.inf
+best_r2 = -np.inf
 
 
 #transformar df em np
@@ -265,6 +266,7 @@ for n_neuronio in n_neuronios:
             best_rmse = rmse
             best_num_layers = n
             best_num_neurons = n_neuronio
+            best_r2 = r2
             previous_model_state = model.state_dict()
             
         del(model , trainer , module, logger)

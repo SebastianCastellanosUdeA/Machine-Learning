@@ -26,7 +26,7 @@ y = data['pm25']
 # Conjunto de entrenamiento (X_train, y_train): usado para entrenar el modelo.
 # Conjunto de validación (X_val, y_val): usado para ajustar los hiperparámetros y evitar el sobreajuste.
 # Conjunto de prueba (X_test, y_test): usado para evaluar el rendimiento final del modelo.
-X_temp, X_test, y_temp, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+X_temp, X_test, y_temp, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 X_train, X_val, y_train, y_val = train_test_split(X_temp, y_temp, test_size=0.2, random_state=42)  # 50% para validación y 50% para prueba
 
 

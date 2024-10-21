@@ -153,7 +153,7 @@ joblib.dump(scaler, 'scaler.pkl')
 Xs = pd.DataFrame(X_s, columns=X.columns, index=X.index)
 
 
-X_trn0, X_tst0, y_trn0, y_tst0 = train_test_split(Xs, y, test_size=0.3, random_state=42)
+X_trn0, X_tst0, y_trn0, y_tst0 = train_test_split(Xs, y, test_size=0.2, random_state=42)
 
 # Identificar los cambios de barrio en el conjunto de entrenamiento
 bairro_changes_train = bairro_changes.loc[X_trn0.index]

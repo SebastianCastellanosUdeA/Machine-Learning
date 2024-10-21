@@ -84,7 +84,7 @@ def summary_plot(results, ax, col='loss', valid_legend='Validation', training_le
     return ax
 
 # Leer os dados
-dadosi = pd.read_excel("input.xlsx")
+dadosi = pd.read_excel("sem_aerosol.xlsx")
 dadosi['NO2'] = pd.to_numeric(dadosi['NO2'], errors='coerce')
 
 # Eliminar las filas donde 'NO2' es NaN
@@ -106,7 +106,7 @@ dados['bairro_changes'] = bairro_changes
 y = dados['PM25']
 
 #escolher as variaveis
-X = dados[['DIRVI', 'aerosol', 'UMI','VELVI','DIST_OCEAN', 'NO2','TEMP']]
+X = dados[['ANO','DIRVI', 'UMI','VELVI','DIST_OCEAN', 'NO2','TEMP']]
 
 # estandar
 scaler = StandardScaler()
@@ -133,7 +133,7 @@ y_sorted = y_trn0.sort_index()
 # Crear subconjuntos solo con los datos de entrenamiento
 sub_x = []
 for _, group in X_sorted.groupby(bairro_changes_trn):
-    subset = group[['DIRVI', 'aerosol', 'UMI','VELVI','DIST_OCEAN','NO2','TEMP']]  # Ajustar las columnas seleccionadas según corresponda
+    subset = group[['ANO','DIRVI', 'UMI','VELVI','DIST_OCEAN', 'NO2','TEMP']]  # Ajustar las columnas seleccionadas según corresponda
     sub_x.append(subset)
 
 sub_y = []
@@ -181,7 +181,7 @@ dm = SimpleDataModule(train,
     
 n_layers = 20
 
-n_neuronios = [1, 2, 3, 4, 5, 10, 15, 20, 30, 50]
+n_neuronios = [1, 10, 20, 30, 50, 100, 200]
 
 
 data = pd.DataFrame(columns=['subconjunto','Folder','Quantidade de Layers', 'Número de Neurônios', 'MSE', 'RMSE', 'R2'])

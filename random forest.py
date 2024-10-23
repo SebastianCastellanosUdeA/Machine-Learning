@@ -4,10 +4,11 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
 import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
 
 # Leer excel
-#data = pd.read_excel('sem_aerosol.xlsx')
-data = pd.read_excel('com_aerosol.xlsx')
+data = pd.read_excel('sem_aerosol.xlsx')
+#data = pd.read_excel('com_aerosol.xlsx')
 
 # Normalizar el nombre de las columnas
 data.columns = data.columns.str.lower().str.replace(' ', '_')
@@ -18,7 +19,7 @@ data.head()
 
 
 # Paso 0: Definir variables de entrada y salida (predicción)
-columnas_a_eliminar = ['pm25','no2','ano']
+columnas_a_eliminar = ['pm25','no2']
 X = data.drop(columnas_a_eliminar, axis=1)
 y = data['pm25']
 
@@ -29,6 +30,14 @@ y = data['pm25']
 X_temp, X_test, y_temp, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 X_train, X_val, y_train, y_val = train_test_split(X_temp, y_temp, test_size=0.2, random_state=42)  # 50% para validación y 50% para prueba
 
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_val_scaled = scaler.transform(X_val)
+X_test_scaled = scaler.transform(X_test)
+
+X_train_scaled = pd.DataFrame(X_train_scaled, columns=X_train.columns)
+X_val_scaled = pd.DataFrame(X_val_scaled, columns=X_val.columns)
+X_test_scaled = pd.DataFrame(X_test_scaled, columns=X_test.columns)
 
 # Paso 2: Definir el espacio de búsqueda de hiperparámetros
 param_dist = {
@@ -49,7 +58,7 @@ random_search = RandomizedSearchCV(estimator=rf, param_distributions=param_dist,
                                    n_iter=50, cv=3, n_jobs=-1, verbose=2, scoring='neg_mean_squared_error')
 
 # Paso 5: Ajustar la búsqueda aleatoria al conjunto de entrenamiento
-random_search.fit(X_train, y_train)
+random_search.fit(X_train_scaled, y_train)
 
 # Obtener los mejores parámetros
 # Muestra los mejores hiperparámetros encontrados durante la búsqueda aleatoria.
@@ -61,15 +70,15 @@ print("Mejor Score (MSE):", -random_search.best_score_)
 # Paso 6: Evaluar el mejor modelo en el conjunto de validación
 # Evalúa el rendimiento del mejor modelo en el conjunto de validación
 best_model = random_search.best_estimator_
-val_mse = mean_squared_error(y_val, best_model.predict(X_val))
-val_r2 = r2_score(y_val, best_model.predict(X_val))
+val_mse = mean_squared_error(y_val, best_model.predict(X_val_scaled))
+val_r2 = r2_score(y_val, best_model.predict(X_val_scaled))
 print(f'Mean Squared Error en el conjunto de validación: {val_mse:.2f}')
 print(f'R^2 en el conjunto de validación: {val_r2:.2f}')
 
 # Paso 7: Evaluar el modelo en el conjunto de prueba
 # Evalúa el rendimiento del modelo en el conjunto de prueba final
-test_mse = mean_squared_error(y_test, best_model.predict(X_test))
-test_r2 = r2_score(y_test, best_model.predict(X_test))
+test_mse = mean_squared_error(y_test, best_model.predict(X_test_scaled))
+test_r2 = r2_score(y_test, best_model.predict(X_test_scaled))
 print(f'Mean Squared Error en el conjunto de prueba: {test_mse:.2f}')
 print(f'R^2 en el conjunto de prueba: {test_r2:.2f}')
 
@@ -77,7 +86,7 @@ print(f'R^2 en el conjunto de prueba: {test_r2:.2f}')
 importances = best_model.feature_importances_
 
 # Crear un dataframe con las características y su importancia
-feature_importance = pd.DataFrame({'Variable': X_train.columns, 'Importance': importances})
+feature_importance = pd.DataFrame({'Variable': X_train_scaled.columns, 'Importance': importances})
 
 # Ordenar las características según su importancia de mayor a menor
 feature_importance = feature_importance.sort_values(by='Importance', ascending=False)

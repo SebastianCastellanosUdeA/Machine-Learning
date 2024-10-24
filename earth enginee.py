@@ -28,7 +28,6 @@ Contorno = ee.FeatureCollection(asset_path)
 # Configurações iniciais para testar os 6 primeiros meses de 2024
 startYear = 2023 # Ano inicial
 endYear = 2023 # Ano final
-endMonthInEndYear = 6 # Limitar até o mês de junho de 2024
 
 maxPixelsExport = 1e13 # Limite de pixels para exportação
 region = Contorno
@@ -47,8 +46,7 @@ def getHourlyAerosolImage(year, month, day, hour):
     # Filtrar la colección por la hora y calcular la media horaria
     hourlyImage = ee.ImageCollection('COPERNICUS/S5P/OFFL/L3_NO2').select('tropospheric_NO2_column_number_density').filterDate(firstDate, lastDate).mean()
 
-    return hourlyImage.clip(region)  # Retorna la imagen recortada para la región
-
+    return hourlyImage.clip(region)  # Retorna la imagen recortada
 
 # Función para exportar imágenes
 def exportImage(image, year, month, day, hour):
@@ -66,40 +64,13 @@ def exportImage(image, year, month, day, hour):
     task.start()
 
 
-
-
 # Loop por años, meses, días y horas para exportar imágenes horarias
 for year in range(startYear, endYear + 1):
-    for month in range(4, 5):# De enero a diciembre
+    for month in range(4, 5):# escoger los meses
         # Determina los días del mes
         days_in_month = monthrange(year, month)[1]
-        #for day in range(1, days_in_month + 1):  # De 1 al último día del mes
-        for day in range(1, 31):
+        for day in range(1, days_in_month + 1):  # De 1 al último día del mes
             for hour in range(0, 24):  # De 0 a 23 horas
                 hourlyImage = getHourlyAerosolImage(year, month, day, hour)  # Obtiene la imagen horaria
                 exportImage(hourlyImage, year, month, day, hour)  # Exporta la imagen
 
-
-# Loop por años, meses, días y horas para exportar imágenes horarias
-for year in range(startYear, endYear + 1):
-    for month in range(5, 6):# De enero a diciembre
-        # Determina los días del mes
-        days_in_month = monthrange(year, month)[1]
-        #for day in range(1, days_in_month + 1):  # De 1 al último día del mes
-        for day in range(1, 32):
-            for hour in range(0, 24):  # De 0 a 23 horas
-                hourlyImage = getHourlyAerosolImage(year, month, day, hour)  # Obtiene la imagen horaria
-                exportImage(hourlyImage, year, month, day, hour)  # Exporta la imagen
-
-
-
-# Loop por años, meses, días y horas para exportar imágenes horarias
-for year in range(startYear, endYear + 1):
-    for month in range(6, 7):# De enero a diciembre
-        # Determina los días del mes
-        days_in_month = monthrange(year, month)[1]
-        #for day in range(1, days_in_month + 1):  # De 1 al último día del mes
-        for day in range(1, 31):
-            for hour in range(0, 24):  # De 0 a 23 horas
-                hourlyImage = getHourlyAerosolImage(year, month, day, hour)  # Obtiene la imagen horaria
-                exportImage(hourlyImage, year, month, day, hour)  # Exporta la imagen

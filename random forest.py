@@ -6,19 +6,15 @@ from sklearn.model_selection import train_test_split, RandomizedSearchCV
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 
-# Leer excel
-data = pd.read_excel('sem_aerosol.xlsx')
-#data = pd.read_excel('com_aerosol.xlsx')
+# Ler excel
+data = pd.read_excel('rf_sem_aerosol.xlsx')
+#data = pd.read_excel('rf_com_aerosol.xlsx')
 
-# Normalizar el nombre de las columnas
+# Normalizar nome das colunas
 data.columns = data.columns.str.lower().str.replace(' ', '_')
 
+# Paso 0: Definir variables de entrada y salida (prediçao)
 
-# Mostrar primeros 5 registros
-data.head()
-
-
-# Paso 0: Definir variables de entrada y salida (predicción)
 columnas_a_eliminar = ['pm25','no2']
 X = data.drop(columnas_a_eliminar, axis=1)
 y = data['pm25']
@@ -30,6 +26,7 @@ y = data['pm25']
 X_temp, X_test, y_temp, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 X_train, X_val, y_train, y_val = train_test_split(X_temp, y_temp, test_size=0.2, random_state=42)  # 50% para validación y 50% para prueba
 
+#Normalizar
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_val_scaled = scaler.transform(X_val)
@@ -100,9 +97,6 @@ plt.ylabel('Variables')
 plt.title('Importance Random Forest features')
 plt.gca().invert_yaxis()  # Invertir el eje Y para que la característica más importante esté en la parte superior
 plt.show()
-
-
-
 
 
 

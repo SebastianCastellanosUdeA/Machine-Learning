@@ -2,15 +2,9 @@
 """
 Created on Tue Sep 24 10:15:16 2024
 
-@author: Trama
+@author: Trama  Sebas
 """
 
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Sep  8 00:00:12 2024
-
-@author: sebas
-"""
 
 #importar livrarias
 import os
@@ -83,16 +77,17 @@ def summary_plot(results, ax, col='loss', valid_legend='Validation', training_le
     ax.legend()
     return ax
 
-# Leer os dados
-dadosi = pd.read_excel("sem_aerosol.xlsx")
+'''
+dadosi = pd.read_excel("ml_sem_aerosol.xlsx")
 dadosi['NO2'] = pd.to_numeric(dadosi['NO2'], errors='coerce')
-
 # Eliminar las filas donde 'NO2' es NaN
 dados = dadosi.dropna(subset=['NO2'])
-
 # Reiniciar los índices
 dados = dados.reset_index(drop=True)
-
+'''
+# Leer os dados
+dados = pd.read_excel("ml_sem_aerosol.xlsx")
+dados['NO2'] = pd.to_numeric(dados['NO2'], errors='coerce')
 
 #treinamento por localização
 
@@ -118,7 +113,6 @@ joblib.dump(scaler, 'scaler.pkl')
 
 # Converter o array numpy estandarizado  para um DataFrame
 Xs = pd.DataFrame(X_s, columns=X.columns, index=X.index)
-
 
 X_trn0, X_tst0, y_trn0, y_tst0 = train_test_split(Xs, y, test_size=0.2, random_state=42)
 
@@ -177,7 +171,7 @@ dm = SimpleDataModule(train,
                       num_workers=min(4, max_num_workers),
                       validation=0.2) # Conjunto de validação será 20% do tamanho do conjunto de treino
  
-# Testando diferentes arquiteturas de rede
+# Testando diferentes arquiteturas de rede e escolher a melhor
     
 n_layers = 20
 
@@ -270,6 +264,12 @@ for n_neuronio in n_neuronios:
             previous_model_state = model.state_dict()
             
         del(model , trainer , module, logger)
+
+
+
+
+
+#STEP 2 - ITERAR POR PARTES Y CROSS VALIDATION
 
 previous_model_state = None
 # Configure o estilo dos gráficos e use a paleta personalizada

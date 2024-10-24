@@ -3,7 +3,7 @@ import os
 import pandas as pd
 from geotiff import GeoTiff
 import numpy as np
-
+import imagecodecs
 
 # Ler os pontos
 pontos_df = pd.read_csv("pontos.csv")
@@ -37,6 +37,7 @@ for tif_file in tif_files:
         #criar array com os pixels
         zarr_array = geo_tiff.read()
         array = np.array(zarr_array)
+        
         #criar array com latitude e longitude
         lon_array, lat_array = geo_tiff.get_coord_arrays()
         lat_vector = lat_array[:, 0]
@@ -69,7 +70,7 @@ for tif_file in tif_files:
 #criar excel
 results_df = pd.DataFrame(results)
     
-results_df.to_excel('resultados055.xlsx', index=False)
+results_df.to_excel('resultados.xlsx', index=False)
     
 
 

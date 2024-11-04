@@ -124,23 +124,6 @@ X_sorted = X_trn0.sort_index()
 y_sorted = y_trn0.sort_index()
 
 
-# Crear subconjuntos solo con los datos de entrenamiento
-sub_x = []
-for _, group in X_sorted.groupby(bairro_changes_trn):
-    subset = group[['ANO','DIRVI', 'UMI','VELVI','DIST_OCEAN', 'NO2','TEMP']]  # Ajustar las columnas seleccionadas según corresponda
-    sub_x.append(subset)
-
-sub_y = []
-for _, group in y_sorted.groupby(bairro_changes_trn):
-    subset_y = group  # No necesitas utilizar índices, ya que el group ya está alineado
-    sub_y.append(subset_y)
-    
-    
-# variaveis acumulativas
-accumulated_x = sub_x[0]
-accumulated_y = sub_y[0]
-
-
 #optimizar o número de neuronios 
 best_num_layers = None
 best_num_neurons = None

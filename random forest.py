@@ -19,10 +19,10 @@ columnas_a_eliminar = ['pm25','no2']
 X = data.drop(columnas_a_eliminar, axis=1)
 y = data['pm25']
 
-# Paso 1: Dividir los datos en conjuntos de entrenamiento, validación y prueba
-# Conjunto de entrenamiento (X_train, y_train): usado para entrenar el modelo.
-# Conjunto de validación (X_val, y_val): usado para ajustar los hiperparámetros y evitar el sobreajuste.
-# Conjunto de prueba (X_test, y_test): usado para evaluar el rendimiento final del modelo.
+# Etapa 1: Dividir os dados em conjuntos de treinamento, validação e teste
+# Conjunto de treinamento (X_train, y_train): usado para treinar o modelo.
+# Conjunto de validação (X_val, y_val): usado para ajustar hiperparâmetros e evitar overfitting.
+# Conjunto de testes (X_test, y_test): utilizado para avaliar o desempenho final do modelo.
 X_temp, X_test, y_temp, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 X_train, X_val, y_train, y_val = train_test_split(X_temp, y_temp, test_size=0.2, random_state=42)  # 50% para validación y 50% para prueba
 
@@ -36,7 +36,7 @@ X_train_scaled = pd.DataFrame(X_train_scaled, columns=X_train.columns)
 X_val_scaled = pd.DataFrame(X_val_scaled, columns=X_val.columns)
 X_test_scaled = pd.DataFrame(X_test_scaled, columns=X_test.columns)
 
-# Paso 2: Definir el espacio de búsqueda de hiperparámetros
+# etapa 2: Defina o espaço de pesquisa do hiperparâmetro
 param_dist = {
     'n_estimators': [50, 100, 200, 300, 400, 500], # Aumentar el número de árboles
     'max_depth': [None, 10, 20, 30, 35], # Ampliar el rango de profundidad máxima
@@ -46,25 +46,25 @@ param_dist = {
     'bootstrap': [True, False], # Opción para utilizar el muestreo bootstrap
 }
 
-# Paso 3: Crear el modelo base
+# etapa 3: Crear o modelo base
 rf = RandomForestRegressor(random_state=42)
 
-# Paso 4: Instanciar RandomizedSearchCV
-# Prueba diferentes combinaciones de hiperparámetros de manera aleatoria
+# etapa 4: Instanciar RandomizedSearchCV
+# Experimentar diferentes combinações de hiperparâmetros aleatoriamente
 random_search = RandomizedSearchCV(estimator=rf, param_distributions=param_dist,
                                    n_iter=50, cv=3, n_jobs=-1, verbose=2, scoring='neg_mean_squared_error')
 
-# Paso 5: Ajustar la búsqueda aleatoria al conjunto de entrenamiento
+# etapa 5: Ajustar pesquisa aleatória ao conjunto de treinamento
 random_search.fit(X_train_scaled, y_train)
 
-# Obtener los mejores parámetros
-# Muestra los mejores hiperparámetros encontrados durante la búsqueda aleatoria.
+# Obter os melhores parâmetros
+# Mostrar os melhores hiperparâmetros encontrados durante a pesquisa aleatória.
 best_params = random_search.best_params_
 print(f"Mejores Parámetros: {best_params}")
 # Imprimir el mejor puntaje (MSE negativo convertido a MSE positivo)
 print("Mejor Score (MSE):", -random_search.best_score_)
 
-# Paso 6: Evaluar el mejor modelo en el conjunto de validación
+# Paso 6: Evaluar el mejor modelo en el conjunto de validação
 # Evalúa el rendimiento del mejor modelo en el conjunto de validación
 best_model = random_search.best_estimator_
 val_mse = mean_squared_error(y_val, best_model.predict(X_val_scaled))
@@ -72,7 +72,7 @@ val_r2 = r2_score(y_val, best_model.predict(X_val_scaled))
 print(f'Mean Squared Error en el conjunto de validación: {val_mse:.2f}')
 print(f'R^2 en el conjunto de validación: {val_r2:.2f}')
 
-# Paso 7: Evaluar el modelo en el conjunto de prueba
+# Paso 7: Evaluar el modelo en el conjunto de teste
 # Evalúa el rendimiento del modelo en el conjunto de prueba final
 test_mse = mean_squared_error(y_test, best_model.predict(X_test_scaled))
 test_r2 = r2_score(y_test, best_model.predict(X_test_scaled))

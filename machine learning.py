@@ -89,14 +89,6 @@ dados = dados.reset_index(drop=True)
 dados = pd.read_excel("ml_sem_aerosol.xlsx")
 dados['NO2'] = pd.to_numeric(dados['NO2'], errors='coerce')
 
-#treinamento por localização
-
-#olhar quando tem mudança de bairro, FÁTIMA E MOURA BRASIL TEM POUCOS DADOS
-dados_modificado = dados['BAIRRO'].replace({'FÁTIMA': 'IGNORAR', 'MOURA BRASIL': 'IGNORAR'})
-
-bairro_changes = dados_modificado.ne(dados_modificado.shift()).cumsum()
-dados['bairro_changes'] = bairro_changes
-
 # Seleccionar as colunas de entrada (features) y a coluna de saida (target)
 y = dados['PM25']
 
@@ -114,12 +106,9 @@ joblib.dump(scaler, 'scaler.pkl')
 # Converter o array numpy estandarizado  para um DataFrame
 Xs = pd.DataFrame(X_s, columns=X.columns, index=X.index)
 
+#dividir os dados
 X_trn0, X_tst0, y_trn0, y_tst0 = train_test_split(Xs, y, test_size=0.2, random_state=42)
 
-# Identificar los cambios de barrio en el conjunto de entrenamiento
-bairro_changes_train = bairro_changes.loc[X_trn0.index]
-
-bairro_changes_trn = bairro_changes_train.sort_index()
 X_sorted = X_trn0.sort_index()
 y_sorted = y_trn0.sort_index()
 

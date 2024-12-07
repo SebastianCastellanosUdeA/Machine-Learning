@@ -81,7 +81,8 @@ for col in columnas_a_imputar:
     mejor_error = float("inf")
     mejor_imputacion = None
 
-    # Probar diferentes valores de k
+    # Probar diferentes valores de k - máximo 5 
+    #cada barrio tiene máximo 5 vecinos según análisis visual
     for k in range(1, 5):
         print(f"Probando k={k}")
         

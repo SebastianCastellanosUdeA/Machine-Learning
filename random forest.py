@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 
 # Ler excel
-data = pd.read_excel('rf_sem_aerosol.xlsx')
+data = pd.read_excel('rf_com_aerosol.xlsx')
 #data = pd.read_excel('rf_com_aerosol.xlsx')
 
 # Normalizar nome das colunas
@@ -15,7 +15,8 @@ data.columns = data.columns.str.lower().str.replace(' ', '_')
 
 # Paso 0: Definir variables de entrada y salida (prediçao)
 
-columnas_a_eliminar = ['pm25','no2']
+#columnas_a_eliminar = ['lat','long','pm25','no2']
+columnas_a_eliminar = ['lat','long','pm25','no2','ano']
 X = data.drop(columnas_a_eliminar, axis=1)
 y = data['pm25']
 
@@ -47,7 +48,7 @@ param_dist = {
 }
 
 # etapa 3: Crear o modelo base
-rf = RandomForestRegressor(random_state=42)
+rf = RandomForestRegressor(random_state=40)
 
 # etapa 4: Instanciar RandomizedSearchCV
 # Experimentar diferentes combinações de hiperparâmetros aleatoriamente
@@ -113,14 +114,41 @@ plt.show()
 
 
 
-y_pred = best_model.predict(X_test)
-results_df = pd.DataFrame({'Real': y_test, 'Predicho': y_pred})
+y_pred = best_model.predict(X_test_scaled)
+results_df = pd.DataFrame({'Real': y_test, 'Modelado': y_pred})
 
 plt.figure(figsize=(10, 6))
 plt.plot(y_test.values, label='Real')
-plt.plot(y_pred, label='Predicho', alpha=0.7)
+plt.plot(y_pred, label='Modelado', alpha=0.7)
 plt.legend()
-plt.title('Valores Reales vs Predichos')
-plt.xlabel('Índice')
+plt.title('Valores Reais vs modelados')
+plt.xlabel('Tempo')
 plt.ylabel('PM2.5')
 plt.show()
+
+
+
+#projetar dados reais
+datos_projetar = pd.read_excel('datos_projetar.xlsx')
+#datos_projetar = pd.read_excel('anual.xlsx')
+datos_projetar.columns = datos_projetar.columns.str.lower().str.replace(' ', '_')
+
+columnas_a_eliminar = ['bairro','lat', 'long', 'ano','mes','dia']
+#columnas_a_eliminar = ['bairro','lat', 'long', 'ano','ni','no2']
+
+X_projetar = datos_projetar.drop(columnas_a_eliminar, axis=1)
+
+#normalizar
+X_projetar_scaled = scaler.transform(X_projetar)
+
+X_projetar_scaled = pd.DataFrame(X_projetar_scaled, columns=X_projetar.columns)
+
+# Realizar la predicción con el modelo entrenado
+y_projetar_pred = best_model.predict(X_projetar_scaled)
+
+# Agregar las predicciones al DataFrame original, si lo deseas
+datos_projetar['pm25_predicted'] = y_projetar_pred
+
+datos_projetar.to_excel('anual_projetados_con_pm25.xlsx', index=False)
+
+

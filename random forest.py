@@ -129,11 +129,11 @@ plt.show()
 
 
 #projetar dados reais
-datos_projetar = pd.read_excel('datos_projetar.xlsx')
+datos_projetar = pd.read_excel('datos_actualizados.xlsx')
 #datos_projetar = pd.read_excel('anual.xlsx')
 datos_projetar.columns = datos_projetar.columns.str.lower().str.replace(' ', '_')
 
-columnas_a_eliminar = ['bairro','lat', 'long', 'ano','mes','dia']
+columnas_a_eliminar = ['hexagono','periodo', 'ano','mes','dia']
 #columnas_a_eliminar = ['bairro','lat', 'long', 'ano','ni','no2']
 
 X_projetar = datos_projetar.drop(columnas_a_eliminar, axis=1)
@@ -149,6 +149,6 @@ y_projetar_pred = best_model.predict(X_projetar_scaled)
 # Agregar las predicciones al DataFrame original, si lo deseas
 datos_projetar['pm25_predicted'] = y_projetar_pred
 
-datos_projetar.to_excel('anual_projetados_con_pm25.xlsx', index=False)
+datos_projetar.to_excel('dados_projetados_finais.xlsx', index=False)
 
 

@@ -3,10 +3,10 @@ import numpy as np
 from scipy import stats
 
 # Cargar los datos desde un archivo Excel
-df = pd.read_excel('datos_projetados_con_pm25.xlsx')
+df = pd.read_excel('dados_projetados_finais.xlsx')
 
 # Agrupar los datos por 'bairro' y 'ano'
-grouped = df.groupby(['bairro', 'ano'])
+grouped = df.groupby(['hexagono','mes', 'ano'])
 
 # Función para calcular el intervalo de confianza del 95%
 def conf_interval(data):
@@ -17,16 +17,16 @@ def conf_interval(data):
 results = grouped['pm25_predicted'].apply(conf_interval).reset_index()
 
 # Pivotar el dataframe para reorganizar los datos
-pivot_df = results.pivot(index=['bairro', 'ano'], columns='level_2', values='pm25_predicted')
+pivot_df = results.pivot(index=['hexagono','mes', 'ano'], columns='level_3', values='pm25_predicted')
 
 # Ahora, pivot_df debería tener 'mean', 'ci95_high' y 'ci95_low' como columnas
 # y 'bairro' y 'ano' como índice. Usamos reset_index para hacer 'bairro' y 'ano' columnas nuevamente.
 pivot_df = pivot_df.reset_index()
 
 # Renombrar las columnas para claridad
-pivot_df.columns = ['bairro', 'ano', 'mean', 'ci95_high', 'ci95_low']
+pivot_df.columns = ['hexagono','mes', 'ano', 'mean', 'ci95_high', 'ci95_low']
 
 # Ahora pivot_df es tu dataframe transformado
 print(pivot_df)
 
-pivot_df.to_excel('calculo_pm25.xlsx', index=False)
+pivot_df.to_excel('calculo_pm25_hexagono.xlsx', index=False)

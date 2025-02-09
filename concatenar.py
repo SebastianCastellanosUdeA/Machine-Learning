@@ -1,15 +1,15 @@
 import pandas as pd
 
 # Cargar los datos desde los archivos Excel
-df_aerosol = pd.read_excel('aerosol.xlsx')
-df_dirviento = pd.read_excel('dirviento.xlsx')
-df_velviento = pd.read_excel('velviento.xlsx')
-df_temperatura = pd.read_excel('temperatura.xlsx')
-df_umidade = pd.read_excel('umidade.xlsx')
+df_aerosol = pd.read_excel('AEROSOL.xlsx')
+df_dirviento = pd.read_excel('DIR VIENTO.xlsx')
+df_velviento = pd.read_excel('VEL VIENTO.xlsx')
+df_temperatura = pd.read_excel('TEMPERATURA.xlsx')
+df_umidade = pd.read_excel('UMIDADE.xlsx')
 
 # Preparar una función para fusionar datos basados en columnas comunes
 def merge_dataframes(base, other, suffix):
-    return pd.merge(base, other, on=['BAIRRO', 'ANO', 'MES', 'DIA'], suffixes=('', suffix), how='inner')
+    return pd.merge(base, other, on=['HEXAGONO', 'ANO', 'MES', 'DIA'], suffixes=('', suffix), how='inner')
 
 # Crear un dataframe base a partir de aerosol que tiene menos datos
 df_base = df_aerosol.copy()
@@ -35,14 +35,14 @@ df_base = df_base.rename(columns={
 })
 
 
-columns_afternoon = ['BAIRRO', 'ANO', 'MES', 'DIA', 
+columns_afternoon = ['HEXAGONO', 'ANO', 'MES', 'DIA', 
                      'AEROSOL_AFTERNOON', 'TEMPERATURA_AFTERNOON', 
                      'DIR_VIENTO_AFTERNOON', 'VEL_VIENTO_AFTERNOON', 'HUMEDAD_AFTERNOON']
 
 df_afternoon = df_base[columns_afternoon].dropna()
 
 # Crear dataframe para 'midday'
-columns_midday = ['BAIRRO', 'ANO', 'MES', 'DIA', 
+columns_midday = ['HEXAGONO', 'ANO', 'MES', 'DIA', 
                   'AEROSOL_MIDDAY', 'TEMPERATURA_MIDDAY', 
                   'DIR_VIENTO_MIDDAY', 'VEL_VIENTO_MIDDAY', 'HUMEDAD_MIDDAY']
 
@@ -52,8 +52,8 @@ df_midday = df_base[columns_midday].dropna()
 # Cada uno solo incluye las columnas para su respectivo período y solo filas completas
 
 # Opcional: Guardar los resultados en archivos Excel
-df_afternoon.to_excel('datos_afternoon.xlsx', index=False)
-df_midday.to_excel('datos_midday.xlsx', index=False)
+df_afternoon.to_excel('datos_afternoon3.xlsx', index=False)
+df_midday.to_excel('datos_midday3.xlsx', index=False)
 
 
 df_datos = pd.read_excel('datos.xlsx')
@@ -61,10 +61,10 @@ df_distancia = pd.read_excel('distancia.xlsx')
 
 # Asegurarse de que los nombres de los barrios están en el mismo formato y corregir si es necesario
 # Suponiendo que necesitamos renombrar 'nome' a 'BAIRRO' en df_distancia para que coincida con df_datos
-df_distancia.rename(columns={'nome': 'BAIRRO'}, inplace=True)
+df_distancia.rename(columns={'id': 'HEXAGONO'}, inplace=True)
 
 # Realizar la fusión en base a la columna 'BAIRRO'
-df_final = pd.merge(df_datos, df_distancia[['BAIRRO', 'Distance', 'latitud', 'longitud']], on='BAIRRO', how='left')
+df_final = pd.merge(df_datos, df_distancia[['HEXAGONO', 'Distance']], on='HEXAGONO', how='left')
 
 # Guardar el DataFrame resultante en un nuevo archivo Excel
 df_final.to_excel('datos_actualizados.xlsx', index=False)

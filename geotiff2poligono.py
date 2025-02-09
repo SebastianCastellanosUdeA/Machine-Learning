@@ -12,7 +12,7 @@ import geopandas as gpd
 import rasterio
 from rasterio.mask import mask
 
-barrios_gpkg = 'BairrosFortal.gpkg'
+barrios_gpkg = 'blz.gpkg'
 barrios_gdf = gpd.read_file(barrios_gpkg)
 
 # Asegurarse de que las coordenadas del shapefile y el GeoTIFF estén en el mismo CRS
@@ -24,7 +24,7 @@ tif_files = [f for f in os.listdir(tif_folder) if f.endswith('.tif')]
 
 # Dividir los archivos en 4 partes
 num_archivos = len(tif_files)
-chunk_size = num_archivos // 2 # Tamaño de cada sublista (1/4 del total)
+chunk_size = num_archivos // 3 # Tamaño de cada sublista (1/4 del total)
 
 # Asegurar que no haya errores con los límites
 tif_chunks = [
@@ -41,7 +41,7 @@ if len(tif_chunks) > 2:
 
 # Iterar sobre las partes
 for part_idx, chunk in enumerate(tif_chunks):
-    print(f"\nProcesando la parte {part_idx + 1} de 2 (Archivos {len(chunk)} archivos)")
+    print(f"\nProcesando la parte {part_idx + 1} de 3 (Archivos {len(chunk)} archivos)")
    
     # Guardar los resultados
     results = []
@@ -83,7 +83,7 @@ for part_idx, chunk in enumerate(tif_chunks):
     
                 # Guardar el resultado
                 results.append({
-                    'Barrio': barrio['nome'],  # Asumiendo que hay una columna 'nombre' en el shapefile
+                    'Barrio': barrio['id'],  # Asumiendo que hay una columna 'nombre' en el shapefile
                     'Archivo': tif_file,
                     'Promedio_Valor_Pixel': promedio
                 })
@@ -91,6 +91,6 @@ for part_idx, chunk in enumerate(tif_chunks):
     # Crear un DataFrame con los resultados
     results_df = pd.DataFrame(results)
     
-    excel_filename = f'vviento2_{part_idx + 1}.xlsx'
+    excel_filename = f'uviento2123_{part_idx + 1}.xlsx'
     # Guardar los resultados en un archivo Excel
     results_df.to_excel(excel_filename, index=False)

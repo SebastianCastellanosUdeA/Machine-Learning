@@ -4,7 +4,7 @@ save_data_on_exit = True
 save_history = True
 save_non_project_files = False
 project_type = 'empty-project-type'
-recent_files = ['random forest.py', 'machine learning.py', 'Machine learning two steps.py']
+recent_files = ['read data.py', 'concatenar.py', 'mapa_diario.py', 'conteo.py', 'pontos_saude.py', 'estabelecimentos.py']
 
 [main]
 version = 0.2.0

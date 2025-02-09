@@ -15,33 +15,46 @@ import os
 import glob
 
 # Carga los polígonos de los barrios
-barrios = gpd.read_file("BairrosFortal.gpkg")
+barrios = gpd.read_file("extraccion.gpkg")
 
-datos = pd.read_excel("powevi.xlsx")
+datos = pd.read_excel("calculo_pm25_hexagono.xlsx")
 datos = pd.read_excel("consolidado variaveis.xlsx")
 
 datos['fecha'] = pd.to_datetime(datos['data'])
 datos['ano'] = pd.to_numeric(datos['ano'])
+datos['mes'] = pd.to_numeric(datos['mes'])
 # Asegúrate de que los nombres de los barrios coincidan en ambos dataframes
-barrios = barrios.merge(datos, how="left", left_on="nome", right_on="bairro")
+barrios = barrios.merge(datos, how="left", left_on="id", right_on="hexagono")
 x_min, y_min, x_max, y_max = barrios.total_bounds
 
 fechas = datos['fecha'].unique()
-fechas = datos['ano'].unique()
+#fechas = datos['ano'].unique()
+combinaciones_unicas = datos[['fecha', 'periodo']].drop_duplicates()
+combinaciones_unicas = datos[['mes', 'ano']].drop_duplicates()
 
-for fecha in fechas:
+
+#for fecha in fechas:
+for _, row in combinaciones_unicas.iterrows():
+    #fecha = row['fecha']
+    #periodo = row['periodo']
+    ano = row['ano']
+    mes = row['mes']
     # Filtrar datos para un solo día
     #datos_dia = barrios[barrios['fecha'] == fecha]
-    datos_dia = barrios[barrios['ano'] == fecha]
-    
+    #datos_dia = barrios[barrios['ano'] == fecha]
+    #datos_dia = barrios[(barrios['fecha'] == fecha) & (barrios['periodo'] == periodo)]
+    datos_dia = barrios[(barrios['ano'] == ano) & (barrios['mes'] == mes)]
+
     # Crear el mapa
-    '''
+    
     fig, ax = plt.subplots(1, 1, figsize=(10, 6))
-    datos_dia.plot(column='pm25', ax=ax, legend=True, cmap='OrRd',
-                   vmin=6, vmax=18,  # Fijar los valores mínimo y máximo de la escala de colores
+    datos_dia.plot(column='mean', ax=ax, legend=True, cmap='OrRd',
+                   vmin=8, vmax=14,  # Fijar los valores mínimo y máximo de la escala de colores
                    legend_kwds={'label': "Concentração de PM2.5", 'orientation': "horizontal"})
     #ax.set_title(f'PM2.5 {fecha.strftime("%Y-%m-%d")}')
-    ax.set_title(f'PM2.5 {fecha}')
+    #ax.set_title(f'PM2.5 {fecha}')
+    ax.set_title(f'PM2.5 {ano} - {mes}')
+    #ax.set_title(f'PM2.5 {fecha.strftime("%Y-%m-%d")} - {periodo}')
     ax.set_xlim(x_min, x_max)
     ax.set_ylim(y_min, y_max)
     ax.set_xticks([])
@@ -49,10 +62,12 @@ for fecha in fechas:
     ax.set_xlabel('')
     ax.set_ylabel('')
     #plt.savefig(f'mapa_{fecha.strftime("%Y-%m-%d")}.png')
-    plt.savefig(f'mapa_{fecha}.png')
+    #plt.savefig(f'mapa_{fecha}.png')
+    plt.savefig(f'mapa_{ano}_{mes}.png')
+    #plt.savefig(f'mapa_{fecha.strftime("%Y-%m-%d")}_{periodo}.png')
     plt.close()
-    '''
-        
+    
+    '''    
     # Crear el mapa compuesto
     fig, axs = plt.subplots(1, 3, figsize=(18, 6))  # 3 subplots en una fila
 
@@ -82,10 +97,10 @@ for fecha in fechas:
     axs[1].set_ylabel('')
 
     # Mapa para Locais
-    datos_dia.plot(column='locais', ax=axs[2], legend=True, cmap='Greens',
-                    vmin=0, vmax=600,
+    datos_dia.plot(column='atacados', ax=axs[2], legend=True, cmap='Greens',
+                    vmin=0, vmax=150,
                     legend_kwds={'label': "Atacados", 'orientation': "horizontal"})
-    axs[2].set_title(f'Locais {fecha}')
+    axs[2].set_title(f'atacados {fecha}')
     axs[2].set_xlim(x_min, x_max)
     axs[2].set_ylim(y_min, y_max)
     axs[2].set_xticks([])
@@ -94,7 +109,7 @@ for fecha in fechas:
     axs[2].set_ylabel('')
     plt.savefig(f'mapa_composto_{fecha}.png')
     plt.close()
-
+    '''
 # Directorio donde están tus imágenes
 directorio_imagenes = 'mapas2'
 # Obtiene una lista de archivos y los ordena
@@ -107,7 +122,7 @@ altura, ancho, capas = imagen_ejemplo.shape
 
 # Define el codec y crea el objeto VideoWriter
 fourcc = cv2.VideoWriter_fourcc(*'MP4V')  # También puedes usar 'XVID'
-salida_video = cv2.VideoWriter('video_consolidado.mp4', fourcc, 1, (ancho, altura))
+salida_video = cv2.VideoWriter('video_consolidado_nao_maiores.mp4', fourcc, 1, (ancho, altura))
 
 
 # Lee cada imagen y la añade al video

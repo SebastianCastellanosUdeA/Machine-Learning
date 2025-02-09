@@ -13,13 +13,8 @@ from datetime import datetime
 # Carga el GeoPackage
 poligonos = gpd.read_file("blz2.gpkg")
 puntos = gpd.read_file("base_principal.gpkg")
+df = pd.read_excel("resultado_c.xlsx")
 
-print("Tipo de geometría en polígonos:", poligonos.geometry.type.unique())
-print("Tipo de geometría en puntos:", puntos.geometry.type.unique())
-print("Geometrías válidas en polígonos:", poligonos.geometry.is_valid.all())
-print("Geometrías válidas en puntos:", puntos.geometry.is_valid.all())
-print("CRS de polígonos:", poligonos.crs)
-print("CRS de puntos:", puntos.crs)
 
 codigos_cnae = ['3513100', '4511103', '4511104', '4511105', '4511106', 
                 '4530701', '4530702', '4622200', '4541201', '4541202', 
@@ -48,9 +43,63 @@ codigos_cnae = ['3513100', '4511103', '4511104', '4511105', '4511106',
 resultados = pd.DataFrame()
 
 
+df['dt_sit_cadastral'] = pd.to_datetime(df['dt_sit_cadastral'])
+df['dt_abertura_estab'] = pd.to_datetime(df['dt_abertura_estab'])
+
+df['dt_sit_cadastral2'] = pd.to_datetime(df['dt_sit_cadastral'].astype(str), format='%Y%m%d', errors='coerce')
+df['dt_abertura_estab2'] = pd.to_datetime(df['dt_abertura_estab'].astype(str), format='%Y%m%d', errors='coerce')
+lista_cnae_int = [int(codigo) for codigo in codigos_cnae]
+resultados = []
+
+
+for year in range(2000, 2023):
+    for month in range(1, 13):
+        first_day = pd.Timestamp(datetime(year, month, 1))
+        if month == 12:
+            last_day = pd.Timestamp(datetime(year + 1, 1, 1))
+        else:
+            last_day = pd.Timestamp(datetime(year, month + 1, 1))
+            
+        # Filtrar puntos según los criterios de fecha y códigos CNAE
+        filtrados = df[
+            (df['cnae_principal_cod'].isin(lista_cnae_int)) &
+            (df['dt_sit_cadastral2'] >= first_day) &
+            (df['dt_abertura_estab2'] < last_day)
+        ]
+
+        # Contar usuarios por cada ID
+        conteo = filtrados.groupby('id').size().reset_index(name='conteo')
+
+        # Agregar los resultados con el año y mes correspondiente
+        conteo['year'] = year
+        conteo['month'] = month
+        resultados.append(conteo)
+
+# Concatenar todos los DataFrames de resultados en uno solo
+resultado_final = pd.concat(resultados, ignore_index=True)
+
+resultado_final.to_excel('resultados_establecimientos.xlsx', index=False)
+
+print(resultado_final)
+
+'''
+id
+26.0     2
+27.0     1
+42.0     3
+43.0     9
+44.0     1
+        ..
+266.0    2
+280.0    2
+282.0    1
+300.0    1
+317.0    1
+'''
+
 # Iterar por cada año y cada mes
 for year in range(2003, 2004):
-    for month in range(1, 6):
+    for month in range(5, 6):
         first_day = datetime(year, month, 1).strftime('%Y%m%d')
         last_day = datetime(year, month + 1, 1).strftime('%Y%m%d') if month < 12 else datetime(year + 1, 1, 1).strftime('%Y%m%d')
         
@@ -75,4 +124,5 @@ for year in range(2003, 2004):
 
 # Guardar o mostrar los resultados
 print(resultados.head())
-resultados.to_excel('resu.xlsx', index=False)
+conteo.to_excel('resus.xlsx', index=False)
+

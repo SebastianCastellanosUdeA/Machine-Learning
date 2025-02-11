@@ -15,21 +15,21 @@ import os
 import glob
 
 # Carga los polígonos de los barrios
-barrios = gpd.read_file("extraccion.gpkg")
+barrios = gpd.read_file("blz2.gpkg")
 
-datos = pd.read_excel("calculo_pm25_hexagono.xlsx")
-datos = pd.read_excel("consolidado variaveis.xlsx")
+#datos = pd.read_excel("calculo_pm25_hexagono.xlsx")
+datos = pd.read_excel("sin centro.xlsx")
 
-datos['fecha'] = pd.to_datetime(datos['data'])
-datos['ano'] = pd.to_numeric(datos['ano'])
-datos['mes'] = pd.to_numeric(datos['mes'])
+#datos['fecha'] = pd.to_datetime(datos['data'])
+datos['ano'] = pd.to_numeric(datos['year'])
+datos['mes'] = pd.to_numeric(datos['month'])
 # Asegúrate de que los nombres de los barrios coincidan en ambos dataframes
-barrios = barrios.merge(datos, how="left", left_on="id", right_on="hexagono")
+barrios = barrios.merge(datos, how="left", left_on="id", right_on="id")
 x_min, y_min, x_max, y_max = barrios.total_bounds
 
-fechas = datos['fecha'].unique()
+#fechas = datos['fecha'].unique()
 #fechas = datos['ano'].unique()
-combinaciones_unicas = datos[['fecha', 'periodo']].drop_duplicates()
+#combinaciones_unicas = datos[['fecha', 'periodo']].drop_duplicates()
 combinaciones_unicas = datos[['mes', 'ano']].drop_duplicates()
 
 
@@ -48,12 +48,12 @@ for _, row in combinaciones_unicas.iterrows():
     # Crear el mapa
     
     fig, ax = plt.subplots(1, 1, figsize=(10, 6))
-    datos_dia.plot(column='mean', ax=ax, legend=True, cmap='OrRd',
-                   vmin=8, vmax=14,  # Fijar los valores mínimo y máximo de la escala de colores
-                   legend_kwds={'label': "Concentração de PM2.5", 'orientation': "horizontal"})
+    datos_dia.plot(column='conteo', ax=ax, legend=True, cmap='OrRd',
+                   vmin=1, vmax=120,  # Fijar los valores mínimo y máximo de la escala de colores
     #ax.set_title(f'PM2.5 {fecha.strftime("%Y-%m-%d")}')
+                   legend_kwds={'label': "atacados", 'orientation': "horizontal"})
+    ax.set_title(f'atacado {ano} - {mes}')
     #ax.set_title(f'PM2.5 {fecha}')
-    ax.set_title(f'PM2.5 {ano} - {mes}')
     #ax.set_title(f'PM2.5 {fecha.strftime("%Y-%m-%d")} - {periodo}')
     ax.set_xlim(x_min, x_max)
     ax.set_ylim(y_min, y_max)
@@ -63,7 +63,7 @@ for _, row in combinaciones_unicas.iterrows():
     ax.set_ylabel('')
     #plt.savefig(f'mapa_{fecha.strftime("%Y-%m-%d")}.png')
     #plt.savefig(f'mapa_{fecha}.png')
-    plt.savefig(f'mapa_{ano}_{mes}.png')
+    plt.savefig(f'atacado_{ano}_{mes}.png')
     #plt.savefig(f'mapa_{fecha.strftime("%Y-%m-%d")}_{periodo}.png')
     plt.close()
     

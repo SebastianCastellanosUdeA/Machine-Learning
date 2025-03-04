@@ -44,7 +44,11 @@ for (year, month), group in df.groupby(['año', 'mes']):
     kmeans = KMeans(n_clusters=5, init='k-means++', n_init=150, max_iter=1000, random_state=None)
     kmeans.fit(X_scaled)
     
-    group['cluster'] = kmeans.labels_
+    centers = scaler.inverse_transform(kmeans.cluster_centers_)
+    sorted_indices = np.argsort([np.linalg.norm(center) for center in centers])  # Ordena por la norma (o cualquier otra lógica)
+    sorted_labels = np.argsort(sorted_indices)  # Crea un nuevo orden para las etiquetas de los clusters
+
+    group['cluster'] = sorted_labels[kmeans.labels_]
     group['cluster_label'] = group['cluster'].apply(lambda x: f'Cluster {x + 1}')
     month_gdf = gdf.merge(group[['id', 'cluster', 'cluster_label']], on='id')
     

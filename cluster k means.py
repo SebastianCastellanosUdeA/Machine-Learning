@@ -19,36 +19,37 @@ df = pd.read_excel('consolidado prueba.xlsx')
 # Cargar datos desde archivo GPKG
 gdf = gpd.read_file('blz.gpkg')
 
-cluster_labels = {0: 'Cluster 1', 1: 'Cluster 2', 2: 'Cluster 3', 3: 'Cluster 4', 4: 'Cluster 5'}
-cluster_colors = ['lightblue', 'darkblue', 'seagreen', 'lightgreen', 'lightpink']
-# Preparar DataFrame para guardar resultados
-results_df = pd.DataFrame()
-
+# Función para guardar el mapa de clusters
 def save_cluster_map(gdf, title, file_name):
     fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-    cmap = colors.ListedColormap(cluster_colors[:len(np.unique(gdf['cluster']))])
+    cluster_colors = ['lightblue', 'darkblue', 'seagreen', 'lightgreen', 'lightpink']  # Lista de colores
+    cmap = colors.ListedColormap(cluster_colors[:len(gdf['cluster'].unique())])
     gdf.plot(column='cluster_label', cmap=cmap, legend=True, ax=ax,
              legend_kwds={'title': 'Tipo de Clúster', 'loc': 'upper right'})
     ax.set_title(title)
     ax.set_axis_off()
     plt.savefig(f"{file_name}.png", bbox_inches='tight')
     plt.close(fig)
-    
-    
+
+# Preparar DataFrame para guardar resultados
+results_df = pd.DataFrame()
+
+
 # Iterar sobre cada combinación de año y mes
 for (year, month), group in df.groupby(['año', 'mes']):
     # Preprocesar los datos
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(group[['IVS', 'locais', 'PM']])
-    data = gdf.merge(group, on='id')
     # Ejecutar K-Means
     kmeans = KMeans(n_clusters=5, init='k-means++', n_init=150, max_iter=1000, random_state=None)
     kmeans.fit(X_scaled)
     
-    clusters = kmeans.fit_predict(X_scaled)
-    data['cluster'] = clusters
-    data['cluster_label'] = data['cluster'].apply(lambda x: cluster_labels[x])
+    group['cluster'] = kmeans.labels_
+    group['cluster_label'] = group['cluster'].apply(lambda x: f'Cluster {x + 1}')
+    month_gdf = gdf.merge(group[['id', 'cluster', 'cluster_label']], on='id')
     
+    save_cluster_map(month_gdf, f'Clusters for {year}-{month}', f'clusters_{year}_{month}')
+
     # Guardar resultados de centros y sumas de cuadrados
     centers = scaler.inverse_transform(kmeans.cluster_centers_)
     new_row = pd.DataFrame({
@@ -64,9 +65,7 @@ for (year, month), group in df.groupby(['año', 'mes']):
     
     results_df = pd.concat([results_df, new_row], ignore_index=True)
     
-    save_cluster_map(data, f'Clusters for {year}-{month}', f'clusters_{year}_{month}')
-    del data
 
 
 # Guardar el DataFrame de resultados
-results_df.to_excel('kmeans_results.xlsx', index=False)
+results_df.to_excel('kmeans_results2.xlsx', index=False)
